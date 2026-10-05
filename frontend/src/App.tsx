@@ -7,6 +7,7 @@ import StationDetails from './pages/StationDetails';
 import Favorites from './pages/Favorites';
 import History from './pages/History';
 import CitiesHub from './pages/CitiesHub';
+import CityStations from './pages/CityStations';
 import Calculator from './pages/Calculator';
 import { InstallPWA } from './components/InstallPWA';
 
@@ -26,6 +27,7 @@ function App() {
             <Route path="favorites" element={<Favorites />} />
             <Route path="history" element={<History />} />
             <Route path="cities" element={<CitiesHub />} />
+            <Route path="city/:cityName" element={<CityStations />} />
             <Route path="calculator" element={<Calculator />} />
           </Route>
         </Routes>

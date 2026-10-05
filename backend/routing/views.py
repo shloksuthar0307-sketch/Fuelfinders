@@ -238,6 +238,71 @@ def get_route_stations(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def get_city_stations(request):
+    city = request.query_params.get('city')
+    if not city:
+        return Response({"error": "Missing city parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        # First geocode the city to get its place_id or bounding box
+        geocode_url = f"https://api.geoapify.com/v1/geocode/search?text={city}&limit=1&apiKey={get_geoapify_key()}"
+        geocode_resp = requests.get(geocode_url, timeout=5)
+        geocode_resp.raise_for_status()
+        geocode_data = geocode_resp.json()
+        
+        if not geocode_data.get('features'):
+            return Response({"error": "City not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        feature = geocode_data['features'][0]
+        bbox = feature.get('bbox') # [lon_min, lat_min, lon_max, lat_max]
+        
+        if not bbox:
+            # fallback to a point radius search if no bbox
+            lat = feature['properties']['lat']
+            lon = feature['properties']['lon']
+            places_url = f"https://api.geoapify.com/v2/places?categories=service.vehicle.fuel&filter=circle:{lon},{lat},10000&limit=50&apiKey={get_geoapify_key()}"
+        else:
+            rect = f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}"
+            places_url = f"https://api.geoapify.com/v2/places?categories=service.vehicle.fuel&filter=rect:{rect}&limit=50&apiKey={get_geoapify_key()}"
+            
+        places_resp = requests.get(places_url, timeout=10)
+        places_resp.raise_for_status()
+        places_data = places_resp.json()
+        
+        stations = []
+        for place in places_data.get('features', []):
+            props = place['properties']
+            
+            supported_fuels = ['petrol', 'diesel']
+            if 'cng' in str(props.get('name', '')).lower() or 'cng' in str(props.get('street', '')).lower():
+                supported_fuels.append('cng')
+                
+            stations.append({
+                'id': props.get('place_id'),
+                'name': props.get('name', 'Fuel Station'),
+                'latitude': props.get('lat'),
+                'longitude': props.get('lon'),
+                'address': props.get('formatted', ''),
+                'city': props.get('city', city),
+                'state': props.get('state', ''),
+                'supported_fuels': supported_fuels,
+                'phone': props.get('contact', {}).get('phone', ''),
+                'opening_hours': props.get('opening_hours', ''),
+            })
+            
+        return Response({
+            "city": city,
+            "center": [feature['properties']['lat'], feature['properties']['lon']],
+            "stations": stations
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_station_details(request, place_id):
     if not place_id:
         return Response({"error": "Missing place_id"}, status=status.HTTP_400_BAD_REQUEST)

@@ -182,7 +182,7 @@ const Home = () => {
             {[...CITIES].sort((a, b) => a.name.localeCompare(b.name)).map((city) => (
               <Link 
                 key={city.name} 
-                to={`/search?origin=${encodeURIComponent(city.name)}`}
+                to={`/city/${encodeURIComponent(city.name)}`}
                 className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between h-28 block"
               >
                 <div className="flex justify-between items-start">

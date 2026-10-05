@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import autocomplete, geocode_search, reverse_geocode, get_route, get_route_stations, get_station_details, get_station_prices
+from .views import autocomplete, geocode_search, reverse_geocode, get_route, get_route_stations, get_station_details, get_station_prices, get_city_stations
 
 urlpatterns = [
     path('autocomplete/', autocomplete, name='autocomplete'),
@@ -7,6 +7,7 @@ urlpatterns = [
     path('reverse-geocode/', reverse_geocode, name='reverse_geocode'),
     path('route/', get_route, name='get_route'),
     path('route-stations/', get_route_stations, name='get_route_stations'),
+    path('city-stations/', get_city_stations, name='get_city_stations'),
     path('station/<str:place_id>/', get_station_details, name='get_station_details'),
     path('station/<str:place_id>/prices/', get_station_prices, name='get_station_prices'),
 ]

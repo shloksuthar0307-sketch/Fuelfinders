@@ -135,3 +135,14 @@ export const fetchStationPrices = async (id: string): Promise<FuelPrice[]> => {
   const response = await apiClient.get<FuelPrice[]>(`/routing/station/${id}/prices/`);
   return response.data;
 };
+
+export interface CityStationsResponse {
+  city: string;
+  center: [number, number];
+  stations: FuelStation[];
+}
+
+export const fetchCityStations = async (city: string): Promise<CityStationsResponse> => {
+  const response = await apiClient.get<CityStationsResponse>(`/routing/city-stations/`, { params: { city } });
+  return response.data;
+};

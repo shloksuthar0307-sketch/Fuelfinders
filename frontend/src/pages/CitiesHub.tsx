@@ -164,7 +164,7 @@ const CitiesHub = () => {
                   .map((city) => (
                   <Link 
                     key={city.name} 
-                    to={`/search?origin=${encodeURIComponent(city.name)}`}
+                    to={`/city/${encodeURIComponent(city.name)}`}
                     className="group bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all flex items-center justify-between"
                   >
                     <div>
