@@ -6,7 +6,6 @@ import SearchResults from './pages/SearchResults';
 import StationDetails from './pages/StationDetails';
 import Favorites from './pages/Favorites';
 import History from './pages/History';
-import Profile from './pages/Profile';
 import CitiesHub from './pages/CitiesHub';
 import Calculator from './pages/Calculator';
 
@@ -24,7 +23,6 @@ function App() {
             <Route path="station/:id" element={<StationDetails />} />
             <Route path="favorites" element={<Favorites />} />
             <Route path="history" element={<History />} />
-            <Route path="profile" element={<Profile />} />
             <Route path="cities" element={<CitiesHub />} />
             <Route path="calculator" element={<Calculator />} />
           </Route>

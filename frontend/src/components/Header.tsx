@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Fuel, Map, Star, Clock, User, Menu } from 'lucide-react';
+import { Fuel, Map, Star, Clock, Menu } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { Button } from './ui/Button';
@@ -12,7 +12,6 @@ export const Header = () => {
     { name: 'Map', path: '/', icon: Map },
     { name: 'Favorites', path: '/favorites', icon: Star },
     { name: 'History', path: '/history', icon: Clock },
-    { name: 'Profile', path: '/profile', icon: User },
   ];
 
   return (
