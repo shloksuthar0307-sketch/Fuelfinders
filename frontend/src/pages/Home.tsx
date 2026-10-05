@@ -32,11 +32,23 @@ const Home = () => {
     setIsLocating(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           setUserLocation([lat, lng]);
-          setOrigin('Current Location'); 
+          
+          try {
+            const { reverseGeocode } = await import('../lib/api');
+            const res = await reverseGeocode(lat, lng);
+            if (res && res.display_name) {
+              setOrigin(res.display_name);
+            } else {
+              setOrigin(`${lat},${lng}`);
+            }
+          } catch (e) {
+            setOrigin(`${lat},${lng}`);
+          }
+          
           setIsLocating(false);
         },
         (error) => {

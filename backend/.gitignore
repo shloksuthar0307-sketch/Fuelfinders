@@ -121,12 +121,20 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+*.env
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Django Static and Media
+/static/
+/staticfiles/
+/media/
+
 
 # Spyder project settings
 .spyderproject

@@ -56,7 +56,7 @@ export const StationCard = ({ station, onFavorite }: StationCardProps) => {
         {station.distance_from_route !== undefined && (
           <div className="flex items-center text-xs font-semibold text-brand-success bg-green-50 px-2 py-1 rounded-md">
             <Navigation className="h-3 w-3 mr-1" />
-            {station.distance_from_route} km detour
+            {Number(station.distance_from_route).toFixed(1)} km from route
           </div>
         )}
       </div>

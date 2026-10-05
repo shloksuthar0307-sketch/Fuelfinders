@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { geocodeSearch, fetchStationsAlongRoute, fetchStations } from '../lib/api';
+import { geocodeSearch, fetchStationsAlongRoute } from '../lib/api';
 import MapComponent from '../components/MapComponent';
-import { Loader2, ArrowLeft, Fuel } from 'lucide-react';
+import { Loader2, ArrowLeft, Fuel, Navigation, Clock } from 'lucide-react';
 import { StationCard } from '../components/StationCard';
 
 const SearchResults = () => {
@@ -11,16 +11,27 @@ const SearchResults = () => {
   const destQuery = searchParams.get('dest');
 
   const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const [routeDistance, setRouteDistance] = useState<number | null>(null);
+  const [routeTime, setRouteTime] = useState<number | null>(null);
+  
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [routeError, setRouteError] = useState('');
 
   const [routeStations, setRouteStations] = useState<any[]>([]);
-  const [sortBy, setSortBy] = useState('detour'); // detour, nearest
+  const [sortBy, setSortBy] = useState('detour'); // detour, time
+
+  const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   // Geocode & Route
   useEffect(() => {
     const fetchRoute = async () => {
-      if (!originQuery) return;
+      if (!originQuery || !destQuery) return;
       setIsLoadingRoute(true);
       setRouteError('');
       
@@ -30,43 +41,11 @@ const SearchResults = () => {
           const parts = originQuery.split(',');
           originLat = parseFloat(parts[0]);
           originLng = parseFloat(parts[1]);
-        } else if (originQuery === 'Current Location') {
-          setRouteError("Origin 'Current Location' requires exact coordinates to be passed.");
-          setIsLoadingRoute(false);
-          return;
         } else {
           const originRes = await geocodeSearch(originQuery);
-          if (!originRes.length) throw new Error("Location not found");
+          if (!originRes.length) throw new Error("Origin location not found");
           originLat = parseFloat(originRes[0].lat);
           originLng = parseFloat(originRes[0].lon);
-        }
-
-        if (!destQuery) {
-          setRouteGeometry([[originLat, originLng]]);
-          const allStations = await fetchStations();
-          
-          const deg2rad = (deg: number) => deg * (Math.PI/180);
-          const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-                      Math.sin(dLon/2) * Math.sin(dLon/2); 
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-            return 6371 * c; 
-          };
-          
-          const matchCity = allStations.filter(s => s.city.toLowerCase().includes(originQuery.toLowerCase()) || originQuery.toLowerCase().includes(s.city.toLowerCase()));
-          
-          if (matchCity.length > 0) {
-            setRouteStations(matchCity.map(s => ({...s, distance_from_route: getDistance(originLat, originLng, s.latitude, s.longitude)})));
-          } else {
-            const near = allStations.filter(s => getDistance(originLat, originLng, s.latitude, s.longitude) <= 50);
-            setRouteStations(near.map(s => ({...s, distance_from_route: getDistance(originLat, originLng, s.latitude, s.longitude)})));
-          }
-          
-          setIsLoadingRoute(false);
-          return;
         }
 
         let destLat, destLng;
@@ -81,27 +60,24 @@ const SearchResults = () => {
           destLng = parseFloat(destRes[0].lon);
         }
 
-        const routeResponse = await fetchStationsAlongRoute(
-          `${originLat},${originLng}`, 
-          `${destLat},${destLng}`
-        );
-        
         const fuelsQuery = searchParams.get('fuels');
         const selectedFuels = fuelsQuery ? fuelsQuery.split(',') : [];
-        
-        let stations = routeResponse.stations;
-        if (selectedFuels.length > 0) {
-          stations = stations.filter((s: any) => 
-            s.supported_fuels && s.supported_fuels.some((f: string) => selectedFuels.includes(f.toLowerCase()))
-          );
-        }
+
+        const routeResponse = await fetchStationsAlongRoute(
+          `${originLat},${originLng}`, 
+          `${destLat},${destLng}`,
+          selectedFuels,
+          2.0 // 2km radius
+        );
         
         const geometry = routeResponse.route_geometry.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
         setRouteGeometry(geometry);
-        setRouteStations(stations);
+        setRouteDistance(routeResponse.base_distance);
+        setRouteTime(routeResponse.base_time);
+        setRouteStations(routeResponse.stations || []);
 
       } catch (err: any) {
-        setRouteError(err.message || 'Failed to calculate route');
+        setRouteError(err.message || 'Failed to calculate route. Ensure you provided valid locations.');
       } finally {
         setIsLoadingRoute(false);
       }
@@ -119,9 +95,11 @@ const SearchResults = () => {
 
   const sortedStations = [...routeStations].sort((a, b) => {
     if (sortBy === 'detour') {
-      return (a.distance_from_route || 0) - (b.distance_from_route || 0);
+      return (a.detour_distance || 0) - (b.detour_distance || 0);
+    } else if (sortBy === 'time') {
+      return (a.extra_time || 0) - (b.extra_time || 0);
     }
-    return 0; // Default or other sorting logic
+    return 0; 
   });
 
   return (
@@ -138,7 +116,7 @@ const SearchResults = () => {
 
       {/* Floating Results Panel */}
       <div className="relative z-10 w-full md:w-[420px] md:h-full pointer-events-none p-3 sm:p-6 flex flex-col justify-end md:justify-start">
-        <div className="glass-card flex flex-col pointer-events-auto max-h-[60vh] md:max-h-full overflow-hidden shadow-2xl">
+        <div className="glass-card flex flex-col pointer-events-auto max-h-[60vh] md:max-h-full overflow-hidden shadow-2xl bg-white/95 backdrop-blur-xl rounded-2xl border border-white/50">
           {/* Header */}
           <div className="p-4 border-b border-gray-100 bg-white/50 backdrop-blur-md">
             <Link to="/" className="inline-flex items-center text-sm font-medium text-brand-secondary hover:text-brand-blue mb-3 transition-colors">
@@ -147,10 +125,23 @@ const SearchResults = () => {
             </Link>
             <h2 className="text-xl font-bold text-brand-navy leading-tight">Stations Along Route</h2>
             <div className="flex items-center text-xs text-brand-secondary mt-1">
-              <span className="truncate max-w-[40%]">{originQuery === 'Current Location' ? 'My Location' : originQuery}</span>
+              <span className="truncate max-w-[40%] font-semibold">{originQuery}</span>
               <span className="mx-2">&rarr;</span>
-              <span className="truncate max-w-[40%]">{destQuery}</span>
+              <span className="truncate max-w-[40%] font-semibold">{destQuery}</span>
             </div>
+            
+            {!isLoadingRoute && !routeError && routeDistance !== null && (
+              <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center text-sm font-medium text-slate-700">
+                  <Navigation className="w-4 h-4 mr-1.5 text-blue-500" />
+                  {formatDistance(routeDistance)}
+                </div>
+                <div className="flex items-center text-sm font-medium text-slate-700">
+                  <Clock className="w-4 h-4 mr-1.5 text-emerald-500" />
+                  {routeTime !== null ? formatTime(routeTime) : '--'}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Controls */}
@@ -162,10 +153,10 @@ const SearchResults = () => {
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm"
+                  className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
                 >
                   <option value="detour">Shortest Detour</option>
-                  <option value="nearest">Nearest to Origin</option>
+                  <option value="time">Least Extra Time</option>
                 </select>
               </div>
             </div>
@@ -186,18 +177,34 @@ const SearchResults = () => {
               </div>
             )}
             
-            {!isLoadingRoute && sortedStations.map((station) => (
-              <StationCard 
-                key={station.id} 
-                station={station} 
-                onFavorite={(e) => { e.preventDefault(); /* Add favorite */ }} 
-              />
+            {!isLoadingRoute && sortedStations.map((station, idx) => (
+              <div key={station.id} className="relative">
+                {idx === 0 && (
+                  <div className="absolute -top-3 right-4 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm border border-emerald-400">
+                    BEST OPTION
+                  </div>
+                )}
+                <StationCard 
+                  station={station} 
+                  onFavorite={(e) => { e.preventDefault(); }} 
+                />
+                <div className="mt-2 bg-slate-50 rounded-lg p-3 text-sm flex justify-between items-center border border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-slate-600 font-medium">+{((station.detour_distance || 0)).toFixed(1)} km detour</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>+{station.extra_time || 0} min</span>
+                  </div>
+                </div>
+              </div>
             ))}
 
             {!isLoadingRoute && !routeError && routeStations.length === 0 && (
               <div className="text-center py-10 text-brand-secondary">
                 <Fuel className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p>No stations found along this route.</p>
+                <p>No stations found within 2 km of your route.</p>
               </div>
             )}
           </div>

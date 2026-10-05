@@ -1,7 +1,10 @@
 from django.urls import path
-from .views import geocode_search, get_route
+from .views import autocomplete, geocode_search, reverse_geocode, get_route, get_route_stations
 
 urlpatterns = [
+    path('autocomplete/', autocomplete, name='autocomplete'),
     path('geocode/', geocode_search, name='geocode_search'),
+    path('reverse-geocode/', reverse_geocode, name='reverse_geocode'),
     path('route/', get_route, name='get_route'),
+    path('route-stations/', get_route_stations, name='get_route_stations'),
 ]

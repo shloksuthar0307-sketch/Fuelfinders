@@ -55,10 +55,6 @@ export const fetchStations = async (): Promise<FuelStation[]> => {
   return response.data;
 };
 
-import * as maptilerClient from '@maptiler/client';
-
-maptilerClient.config.apiKey = 'nG37oSzBVvXqSMDtYxgB';
-
 export interface GeocodeResult {
   place_id: number | string;
   lat: string;
@@ -68,44 +64,64 @@ export interface GeocodeResult {
 
 export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => {
   try {
-    const result = await maptilerClient.geocoding.forward(query, { limit: 5 });
-    if (result && result.features) {
-      return result.features.map((feature: any) => ({
-        place_id: feature.id || Math.random().toString(),
-        lat: feature.center[1].toString(),
-        lon: feature.center[0].toString(),
-        display_name: feature.place_name || feature.text
-      }));
-    }
-    return [];
+    const response = await apiClient.get('/routing/geocode/', { params: { q: query } });
+    return response.data;
   } catch (error) {
-    console.error("MapTiler Geocoding Error:", error);
+    console.error("Geocoding Error:", error);
     return [];
   }
 };
 
-export const getRoute = async (originLat: number, originLng: number, destLat: number, destLng: number) => {
-  const response = await apiClient.get('/routing/route/', {
-    params: {
-      origin: `${originLat},${originLng}`,
-      destination: `${destLat},${destLng}`
+export const autocompleteSearch = async (query: string): Promise<GeocodeResult[]> => {
+  try {
+    const response = await apiClient.get('/routing/autocomplete/', { params: { q: query } });
+    return response.data;
+  } catch (error) {
+    console.error("Autocomplete Error:", error);
+    return [];
+  }
+};
+
+export const reverseGeocode = async (lat: number, lon: number): Promise<GeocodeResult | null> => {
+  try {
+    const response = await apiClient.get('/routing/reverse-geocode/', { params: { lat, lon } });
+    if (response.data && response.data.length > 0) {
+      return response.data[0];
     }
+    return null;
+  } catch (error) {
+    console.error("Reverse Geocoding Error:", error);
+    return null;
+  }
+};
+
+export const getRoute = async (originLat: number, originLng: number, destLat: number, destLng: number) => {
+  const response = await apiClient.post('/routing/route/', {
+    origin: `${originLat},${originLng}`,
+    destination: `${destLat},${destLng}`
   });
   return response.data;
 };
 
-export interface AlongRouteResponse {
-  stations: (FuelStation & { distance_from_route?: number })[];
-  route_geometry: [number, number][]; // [lng, lat] from GeoJSON
+export interface RouteStation extends FuelStation {
+  distance_from_route?: number;
+  detour_distance?: number;
+  extra_time?: number;
 }
 
-export const fetchStationsAlongRoute = async (origin: string, dest: string, tolerance: number = 5): Promise<AlongRouteResponse> => {
-  const response = await apiClient.get<AlongRouteResponse>('/stations/along-route/', {
-    params: {
-      origin,
-      destination: dest,
-      tolerance
-    }
+export interface AlongRouteResponse {
+  stations: RouteStation[];
+  route_geometry: [number, number][]; // [lon, lat]
+  base_distance: number;
+  base_time: number;
+}
+
+export const fetchStationsAlongRoute = async (origin: string, dest: string, fuels: string[] = [], tolerance: number = 2): Promise<AlongRouteResponse> => {
+  const response = await apiClient.post<AlongRouteResponse>('/routing/route-stations/', {
+    origin,
+    destination: dest,
+    fuels,
+    tolerance
   });
   return response.data;
 };

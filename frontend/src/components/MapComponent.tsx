@@ -1,9 +1,8 @@
-import { useRef, useEffect } from 'react';
-import * as maptilersdk from '@maptiler/sdk';
-import "@maptiler/sdk/dist/maptiler-sdk.css";
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import type { FuelStation } from '../lib/api';
-
-maptilersdk.config.apiKey = 'nG37oSzBVvXqSMDtYxgB';
 
 interface MapComponentProps {
   stations?: FuelStation[];
@@ -13,149 +12,142 @@ interface MapComponentProps {
   routeGeometry?: [number, number][];
 }
 
-const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, userLocation, routeGeometry }: MapComponentProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maptilersdk.Map | null>(null);
-  const markers = useRef<maptilersdk.Marker[]>([]);
-  const polylineSourceId = 'route-source';
+// Fix for default Leaflet marker icons not showing up due to Webpack/Vite asset resolution
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
-  // Initialize Map
+// Custom icons
+const createIcon = (color: string) => {
+  return new L.DivIcon({
+    className: 'custom-marker',
+    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+  });
+};
+
+const userIcon = new L.DivIcon({
+  className: 'user-marker',
+  html: `<div class="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-md animate-pulse"></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+const originDestIcon = (isOrigin: boolean) => new L.DivIcon({
+  className: 'route-point-marker',
+  html: `<div style="background-color: ${isOrigin ? '#10B981' : '#EF4444'}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+const AutoFitBounds = ({ routeGeometry, stations, center, zoom }: any) => {
+  const map = useMap();
   useEffect(() => {
-    if (map.current) return;
-
-    map.current = new maptilersdk.Map({
-      container: mapContainer.current!,
-      style: maptilersdk.MapStyle.STREETS,
-      center: [center[1], center[0]], // [lng, lat]
-      zoom: zoom,
-      navigationControl: true,
-      geolocateControl: false,
-    });
-  }, []);
-
-  // Update center when props change
-  useEffect(() => {
-    if (map.current && center) {
-      map.current.flyTo({ center: [center[1], center[0]], zoom: zoom });
+    if (routeGeometry && routeGeometry.length > 0) {
+      const bounds = L.latLngBounds(routeGeometry);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (center) {
+      map.flyTo(center, zoom);
     }
-  }, [center, zoom]);
+  }, [map, routeGeometry, stations, center, zoom]);
+  return null;
+};
 
-  // Handle Markers
-  useEffect(() => {
-    if (!map.current) return;
-    
-    // Clear old markers
-    markers.current.forEach(m => m.remove());
-    markers.current = [];
-
-    // User Location
-    if (userLocation) {
-       const el = document.createElement('div');
-       el.className = 'w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-md animate-pulse';
-       const m = new maptilersdk.Marker({element: el})
-         .setLngLat([userLocation[1], userLocation[0]])
-         .addTo(map.current);
-       markers.current.push(m);
-    }
-
-    // Stations
-    stations.forEach(station => {
-       const isCNG = station.supported_fuels.includes('cng');
-       const isPetrol = station.supported_fuels.includes('petrol');
-       let color = '#2563EB'; // brand-blue
-       if (isCNG) color = '#10B981'; // success
-       else if (isPetrol) color = '#F97316'; // orange
-
-       const popupHtml = `
-          <div class="p-2 min-w-[180px] font-sans">
-            <h3 class="font-bold text-base text-gray-900 mb-1">${station.name}</h3>
-            <p class="text-xs text-gray-500 mb-3">${station.address || `${station.city}, ${station.state}`}</p>
-            <div class="flex gap-1 flex-wrap mb-3">
-              ${station.supported_fuels.map(f => `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded uppercase tracking-wider">${f}</span>`).join('')}
-            </div>
-            <a href="/station/${station.id}" style="display:block; text-align:center; color:white; background:#2563EB; border-radius:8px; padding:8px; font-weight:bold; text-decoration:none;">
-              View Details
-            </a>
-          </div>
-       `;
-       const popup = new maptilersdk.Popup({ offset: 25 }).setHTML(popupHtml);
-
-       const m = new maptilersdk.Marker({ color })
-         .setLngLat([station.longitude, station.latitude])
-         .setPopup(popup)
-         .addTo(map.current!);
-       markers.current.push(m);
-    });
-
-  }, [stations, userLocation]);
-
-  // Handle Route Geometry (Polyline)
-  useEffect(() => {
-    if (!map.current) return;
-    const m = map.current;
-
-    const drawRoute = () => {
-      const source = m.getSource(polylineSourceId) as maptilersdk.GeoJSONSource;
-      
-      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: routeGeometry ? routeGeometry.map(c => [c[1], c[0]]) : []
-        }
-      };
-
-      if (source) {
-        source.setData(geojson);
-      } else {
-        m.addSource(polylineSourceId, {
-          type: 'geojson',
-          data: geojson
-        });
-
-        m.addLayer({
-          id: 'route-line-bg',
-          type: 'line',
-          source: polylineSourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#3b82f6',
-            'line-width': 8,
-            'line-opacity': 0.3
-          }
-        });
-
-        m.addLayer({
-          id: 'route-line',
-          type: 'line',
-          source: polylineSourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#2563EB',
-            'line-width': 4
-          }
-        });
-      }
-    };
-
-    if (m.isStyleLoaded()) {
-      drawRoute();
-    } else {
-      m.once('style.load', drawRoute);
-    }
-
-  }, [routeGeometry]);
+const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, userLocation, routeGeometry = [] }: MapComponentProps) => {
+  const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY || '88746cf83b5445c19d3035dd394383c7';
 
   return (
     <div className="w-full h-full relative z-0">
-      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+      <MapContainer 
+        center={center} 
+        zoom={zoom} 
+        style={{ width: '100%', height: '100%' }}
+        zoomControl={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Powered by Geoapify'
+          url={`https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=${geoapifyKey}`}
+        />
+
+        <AutoFitBounds routeGeometry={routeGeometry} stations={stations} center={center} zoom={zoom} />
+
+        {userLocation && (
+          <Marker position={userLocation} icon={userIcon}>
+            <Popup>Your Location</Popup>
+          </Marker>
+        )}
+
+        {routeGeometry.length > 0 && (
+          <>
+            <Polyline 
+              positions={routeGeometry as L.LatLngExpression[]} 
+              color="#3b82f6" 
+              weight={8} 
+              opacity={0.4} 
+            />
+            <Polyline 
+              positions={routeGeometry as L.LatLngExpression[]} 
+              color="#2563EB" 
+              weight={4} 
+            />
+            <Marker position={routeGeometry[0]} icon={originDestIcon(true)}>
+              <Popup>Origin</Popup>
+            </Marker>
+            <Marker position={routeGeometry[routeGeometry.length - 1]} icon={originDestIcon(false)}>
+              <Popup>Destination</Popup>
+            </Marker>
+          </>
+        )}
+
+        {stations.map(station => {
+          const isCNG = station.supported_fuels.includes('cng');
+          const isPetrol = station.supported_fuels.includes('petrol');
+          let color = '#2563EB'; // brand-blue
+          if (isCNG) color = '#10B981'; // success
+          else if (isPetrol) color = '#F97316'; // orange
+
+          return (
+            <Marker 
+              key={station.id} 
+              position={[station.latitude, station.longitude]} 
+              icon={createIcon(color)}
+            >
+              <Popup className="custom-popup">
+                <div className="p-1 min-w-[180px] font-sans">
+                  <h3 className="font-bold text-base text-gray-900 mb-1">{station.name}</h3>
+                  <p className="text-xs text-gray-500 mb-2">{station.address || `${station.city}, ${station.state}`}</p>
+                  
+                  {(station as any).detour_distance !== undefined && (
+                    <div className="bg-blue-50 border border-blue-100 p-2 rounded mb-3 text-xs">
+                      <div className="flex justify-between font-medium text-blue-800">
+                        <span>Detour:</span>
+                        <span>+{((station as any).detour_distance || 0).toFixed(1)} km</span>
+                      </div>
+                      <div className="flex justify-between font-medium text-blue-800 mt-1">
+                        <span>Extra Time:</span>
+                        <span>+{(station as any).extra_time || 0} min</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-1 flex-wrap mb-3">
+                    {station.supported_fuels.map(f => (
+                      <span key={f} className="px-1.5 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded uppercase tracking-wider">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MapContainer>
     </div>
   );
 };

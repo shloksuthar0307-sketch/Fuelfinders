@@ -9,6 +9,8 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = 'django-insecure-4+pf@-0612!r5e%sb2b$x5eikbdn%%grsg7bo_ut$ny%$*v3lx'
 DEBUG = True
 
+GEOAPIFY_API_KEY = os.getenv('GEOAPIFY_API_KEY')
+
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [

@@ -27,10 +27,16 @@ dist-ssr
 
 # Environment Variables
 .env
+.env.*
+*.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# API keys and secrets
+*.pem
+*.key
 
 # Build output and tooling caches
 build
