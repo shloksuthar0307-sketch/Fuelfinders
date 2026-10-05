@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Navigation, MapPin, Calendar, Trash2, ArrowRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import { getRouteHistory, clearRouteHistory, RouteHistoryItem } from '../lib/history';
+import { getRouteHistory, clearRouteHistory, type RouteHistoryItem } from '../lib/history';
 import { Link } from 'react-router-dom';
 
 const History = () => {
