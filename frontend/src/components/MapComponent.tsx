@@ -1,20 +1,9 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useRef, useEffect } from 'react';
+import * as maptilersdk from '@maptiler/sdk';
+import "@maptiler/sdk/dist/maptiler-sdk.css";
 import type { FuelStation } from '../lib/api';
 
-// Fix for default marker icon in Leaflet when using Vite/Webpack
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+maptilersdk.config.apiKey = 'nG37oSzBVvXqSMDtYxgB';
 
 interface MapComponentProps {
   stations?: FuelStation[];
@@ -24,62 +13,150 @@ interface MapComponentProps {
   routeGeometry?: [number, number][];
 }
 
-// Helper to recenter map when center changes
-const RecenterAutomatically = ({ center }: { center: [number, number] }) => {
-  const map = useMap();
+const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, userLocation, routeGeometry }: MapComponentProps) => {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maptilersdk.Map | null>(null);
+  const markers = useRef<maptilersdk.Marker[]>([]);
+  const polylineSourceId = 'route-source';
+
+  // Initialize Map
   useEffect(() => {
-    map.setView(center);
-  }, [center, map]);
-  return null;
-};
+    if (map.current) return;
 
-const MapComponent = ({ stations = [], center = [19.0760, 72.8777], zoom = 11, userLocation, routeGeometry }: MapComponentProps) => {
-  return (
-    <MapContainer
-      center={center}
-      zoom={zoom}
-      style={{ height: '100%', width: '100%', zIndex: 0 }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <RecenterAutomatically center={center} />
+    map.current = new maptilersdk.Map({
+      container: mapContainer.current!,
+      style: maptilersdk.MapStyle.STREETS,
+      center: [center[1], center[0]], // [lng, lat]
+      zoom: zoom,
+      navigationControl: true,
+      geolocateControl: false,
+    });
+  }, []);
 
-      {/* User Location Marker */}
-      {userLocation && (
-        <Marker position={userLocation}>
-          <Popup>You are here</Popup>
-        </Marker>
-      )}
+  // Update center when props change
+  useEffect(() => {
+    if (map.current && center) {
+      map.current.flyTo({ center: [center[1], center[0]], zoom: zoom });
+    }
+  }, [center, zoom]);
 
-      {/* Fuel Station Markers */}
-      {stations.map((station) => (
-        <Marker key={station.id} position={[station.latitude, station.longitude]}>
-          <Popup>
-            <div className="p-1">
-              <h3 className="font-bold">{station.name}</h3>
-              <p className="text-sm text-gray-600">{station.address || `${station.city}, ${station.state}`}</p>
-              <div className="mt-2 flex gap-1 flex-wrap">
-                {station.supported_fuels.map(f => (
-                  <span key={f} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded uppercase">
-                    {f}
-                  </span>
-                ))}
-              </div>
-              <a href={`/station/${station.id}`} className="block mt-3 text-center text-xs text-white bg-blue-600 rounded py-1 hover:bg-blue-700 font-medium">
-                View Details
-              </a>
+  // Handle Markers
+  useEffect(() => {
+    if (!map.current) return;
+    
+    // Clear old markers
+    markers.current.forEach(m => m.remove());
+    markers.current = [];
+
+    // User Location
+    if (userLocation) {
+       const el = document.createElement('div');
+       el.className = 'w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-md animate-pulse';
+       const m = new maptilersdk.Marker({element: el})
+         .setLngLat([userLocation[1], userLocation[0]])
+         .addTo(map.current);
+       markers.current.push(m);
+    }
+
+    // Stations
+    stations.forEach(station => {
+       const isCNG = station.supported_fuels.includes('cng');
+       const isPetrol = station.supported_fuels.includes('petrol');
+       let color = '#2563EB'; // brand-blue
+       if (isCNG) color = '#10B981'; // success
+       else if (isPetrol) color = '#F97316'; // orange
+
+       const popupHtml = `
+          <div class="p-2 min-w-[180px] font-sans">
+            <h3 class="font-bold text-base text-gray-900 mb-1">${station.name}</h3>
+            <p class="text-xs text-gray-500 mb-3">${station.address || `${station.city}, ${station.state}`}</p>
+            <div class="flex gap-1 flex-wrap mb-3">
+              ${station.supported_fuels.map(f => `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded uppercase tracking-wider">${f}</span>`).join('')}
             </div>
-          </Popup>
-        </Marker>
-      ))}
+            <a href="/station/${station.id}" style="display:block; text-align:center; color:white; background:#2563EB; border-radius:8px; padding:8px; font-weight:bold; text-decoration:none;">
+              View Details
+            </a>
+          </div>
+       `;
+       const popup = new maptilersdk.Popup({ offset: 25 }).setHTML(popupHtml);
 
-      {/* Route Polyline */}
-      {routeGeometry && routeGeometry.length > 0 && (
-        <Polyline positions={routeGeometry} color="blue" weight={4} opacity={0.7} />
-      )}
-    </MapContainer>
+       const m = new maptilersdk.Marker({ color })
+         .setLngLat([station.longitude, station.latitude])
+         .setPopup(popup)
+         .addTo(map.current!);
+       markers.current.push(m);
+    });
+
+  }, [stations, userLocation]);
+
+  // Handle Route Geometry (Polyline)
+  useEffect(() => {
+    if (!map.current) return;
+    const m = map.current;
+
+    const drawRoute = () => {
+      const source = m.getSource(polylineSourceId) as maptilersdk.GeoJSONSource;
+      
+      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: routeGeometry ? routeGeometry.map(c => [c[1], c[0]]) : []
+        }
+      };
+
+      if (source) {
+        source.setData(geojson);
+      } else {
+        m.addSource(polylineSourceId, {
+          type: 'geojson',
+          data: geojson
+        });
+
+        m.addLayer({
+          id: 'route-line-bg',
+          type: 'line',
+          source: polylineSourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 8,
+            'line-opacity': 0.3
+          }
+        });
+
+        m.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: polylineSourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#2563EB',
+            'line-width': 4
+          }
+        });
+      }
+    };
+
+    if (m.isStyleLoaded()) {
+      drawRoute();
+    } else {
+      m.once('style.load', drawRoute);
+    }
+
+  }, [routeGeometry]);
+
+  return (
+    <div className="w-full h-full relative z-0">
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+    </div>
   );
 };
 

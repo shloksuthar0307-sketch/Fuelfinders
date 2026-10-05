@@ -46,26 +46,25 @@ class FuelStationViewSet(viewsets.ReadOnlyModelViewSet):
         except ValueError:
             tolerance = 5.0
 
-        # 1. Fetch route from Google Maps API
+        # 1. Fetch route from OSRM API (Free, no key required)
         import requests
         import polyline
-        import os
         
-        url = "https://maps.googleapis.com/maps/api/directions/json"
+        # OSRM expects longitude,latitude format
+        origin_lon_lat = f"{origin.split(',')[1]},{origin.split(',')[0]}"
+        dest_lon_lat = f"{destination.split(',')[1]},{destination.split(',')[0]}"
+        
+        url = f"http://router.project-osrm.org/route/v1/driving/{origin_lon_lat};{dest_lon_lat}"
         try:
-            resp = requests.get(url, params={
-                'origin': origin,
-                'destination': destination,
-                'key': os.environ.get('GOOGLE_MAPS_API_KEY', '')
-            }, timeout=5)
+            resp = requests.get(url, params={'overview': 'full'}, timeout=5)
             resp.raise_for_status()
             route_data = resp.json()
             
-            if route_data.get('status') != 'OK':
-                return Response({"error": route_data.get('error_message', route_data.get('status'))}, status=400)
+            if route_data.get('code') != 'Ok':
+                return Response({"error": route_data.get('message', 'Routing failed')}, status=400)
                 
-            # Google maps returns an encoded polyline. We need list of [lng, lat]
-            encoded_polyline = route_data['routes'][0]['overview_polyline']['points']
+            # OSRM returns an encoded polyline in 'geometry'
+            encoded_polyline = route_data['routes'][0]['geometry']
             decoded_points = polyline.decode(encoded_polyline) # returns [(lat, lng), ...]
             geometry = [[lng, lat] for lat, lng in decoded_points]
         except Exception as e:

@@ -1,21 +1,44 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-blue: #2563EB;
+  --color-brand-navy: #0F172A;
+  --color-brand-bg: #F8FAFC;
+  --color-brand-surface: #FFFFFF;
+  --color-brand-secondary: #64748B;
+  --color-brand-success: #16A34A;
+  --color-brand-warning: #F59E0B;
+  --color-brand-danger: #DC2626;
+
+  --font-sans: 'Inter', sans-serif;
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --background: 210 40% 98%; /* F8FAFC */
+    --foreground: 222.2 84% 4.9%; /* 0F172A */
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+  body {
+    @apply bg-brand-bg text-brand-navy font-sans antialiased;
   }
 }
 
-body {
-  @apply bg-gray-50 text-gray-900;
+@layer utilities {
+  .glassmorphism {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-sm border border-gray-100 shadow-lg rounded-2xl;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
