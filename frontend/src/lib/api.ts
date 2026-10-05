@@ -127,11 +127,11 @@ export const fetchStationsAlongRoute = async (origin: string, dest: string, fuel
 };
 
 export const fetchStation = async (id: string): Promise<FuelStation> => {
-  const response = await apiClient.get<FuelStation>(`/stations/${id}/`);
+  const response = await apiClient.get<FuelStation>(`/routing/station/${id}/`);
   return response.data;
 };
 
 export const fetchStationPrices = async (id: string): Promise<FuelPrice[]> => {
-  const response = await apiClient.get<FuelPrice[]>(`/stations/${id}/prices/`);
+  const response = await apiClient.get<FuelPrice[]>(`/routing/station/${id}/prices/`);
   return response.data;
 };

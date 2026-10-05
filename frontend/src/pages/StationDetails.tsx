@@ -1,13 +1,21 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchStation, fetchStationPrices } from '../lib/api';
+import { fetchStation, fetchStationPrices, getRoute } from '../lib/api';
 import MapComponent from '../components/MapComponent';
-import { MapPin, Phone, Clock, Navigation, CheckCircle2, XCircle, Loader2, Star, Share2 } from 'lucide-react';
+import { MapPin, Phone, Clock, Navigation, CheckCircle2, XCircle, Loader2, Heart, Share2 } from 'lucide-react';
 import { FuelPriceCard } from '../components/FuelPriceCard';
 import { Button } from '../components/ui/Button';
+import { useFavorites } from '../hooks/useFavorites';
+import clsx from 'clsx';
 
 const StationDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const [isRouting, setIsRouting] = useState(false);
 
   const { data: station, isLoading: isStationLoading } = useQuery({
     queryKey: ['station', id],
@@ -20,6 +28,36 @@ const StationDetails = () => {
     queryFn: () => fetchStationPrices(id!),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (station && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setUserLocation([lat, lng]);
+          
+          try {
+            setIsRouting(true);
+            const routeData = await getRoute(lat, lng, station.latitude, station.longitude);
+            if (routeData && routeData.features && routeData.features.length > 0) {
+              const geom = routeData.features[0].geometry.coordinates[0];
+              // Geoapify returns [lon, lat], convert to [lat, lon] for Leaflet
+              const flippedGeom = geom.map((c: [number, number]) => [c[1], c[0]]);
+              setRouteGeometry(flippedGeom);
+            }
+          } catch (e) {
+            console.error("Failed to get route from user to station", e);
+          } finally {
+            setIsRouting(false);
+          }
+        },
+        (error) => {
+          console.error("Error getting user location", error);
+        }
+      );
+    }
+  }, [station]);
 
   if (isStationLoading) {
     return (
@@ -39,6 +77,8 @@ const StationDetails = () => {
     window.open(url, '_blank');
   };
 
+  const isFav = isFavorite(station.id);
+
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 w-full fade-in">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -52,8 +92,14 @@ const StationDetails = () => {
                 <p className="text-brand-secondary mt-1 font-medium">{station.city}, {station.state}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" title="Save to Favorites">
-                  <Star className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  title="Save to Favorites"
+                  className={clsx("transition-colors", isFav ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-400")}
+                  onClick={() => toggleFavorite(station)}
+                >
+                  <Heart className="h-5 w-5" fill={isFav ? "currentColor" : "none"} />
                 </Button>
                 <Button variant="ghost" size="icon" title="Share">
                   <Share2 className="h-5 w-5" />
@@ -135,11 +181,18 @@ const StationDetails = () => {
         </div>
 
         {/* Sidebar Map */}
-        <div className="h-[400px] lg:h-[calc(100vh-10rem)] lg:sticky lg:top-24 rounded-2xl overflow-hidden shadow-lg border border-gray-100 z-0">
+        <div className="h-[400px] lg:h-[calc(100vh-10rem)] lg:sticky lg:top-24 rounded-2xl overflow-hidden shadow-lg border border-gray-100 z-0 relative">
+          {isRouting && (
+            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-medium text-brand-blue z-[1000] shadow-sm flex items-center">
+              <Loader2 className="animate-spin h-3 w-3 mr-1.5" /> Routing...
+            </div>
+          )}
           <MapComponent 
             stations={[station]} 
-            center={[station.latitude, station.longitude]} 
-            zoom={15} 
+            center={routeGeometry.length > 0 ? undefined : [station.latitude, station.longitude]} 
+            zoom={routeGeometry.length > 0 ? undefined : 15}
+            userLocation={userLocation}
+            routeGeometry={routeGeometry}
           />
         </div>
 

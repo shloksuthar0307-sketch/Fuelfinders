@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Navigation } from 'lucide-react';
 import clsx from 'clsx';
 import { Button } from './ui/Button';
+import { useFavorites } from '../hooks/useFavorites';
 
 export interface StationData {
   id: string | number;
@@ -19,6 +20,15 @@ interface StationCardProps {
 }
 
 export const StationCard = ({ station, onFavorite }: StationCardProps) => {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const isFav = isFavorite(station.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toggleFavorite(station);
+    if (onFavorite) onFavorite(e);
+  };
+
   return (
     <Link 
       to={`/station/${station.id}`} 
@@ -29,10 +39,10 @@ export const StationCard = ({ station, onFavorite }: StationCardProps) => {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="text-gray-300 hover:text-brand-danger h-8 w-8 -mr-2 -mt-2" 
-          onClick={onFavorite || ((e) => e.preventDefault())}
+          className={clsx("h-8 w-8 -mr-2 -mt-2 transition-colors", isFav ? "text-red-500 hover:text-red-600" : "text-gray-300 hover:text-red-400")}
+          onClick={handleFavoriteClick}
         >
-          <Heart className="h-5 w-5" />
+          <Heart className="h-5 w-5" fill={isFav ? "currentColor" : "none"} />
         </Button>
       </div>
       

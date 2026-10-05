@@ -1,9 +1,11 @@
 import { Star, Fuel } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { useFavorites } from '../hooks/useFavorites';
+import { StationCard } from '../components/StationCard';
 
 const Favorites = () => {
-  // In a real application, fetch from the backend API. 
-  // For now, returning a beautiful empty state or mock state.
+  const { favorites } = useFavorites();
+
   return (
     <div className="flex-1 p-4 sm:p-8 bg-brand-bg fade-in overflow-y-auto">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -17,16 +19,24 @@ const Favorites = () => {
           </div>
         </div>
 
-        <Card className="shadow-lg border-dashed">
-          <CardHeader className="text-center pb-2 pt-12">
-            <Fuel className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <CardTitle className="text-xl">No saved stations yet</CardTitle>
-            <CardDescription className="max-w-md mx-auto mt-2">
-              When you find a station you like, tap the heart icon to save it here for quick access later.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-12" />
-        </Card>
+        {favorites.length === 0 ? (
+          <Card className="shadow-lg border-dashed">
+            <CardHeader className="text-center pb-2 pt-12">
+              <Fuel className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <CardTitle className="text-xl">No saved stations yet</CardTitle>
+              <CardDescription className="max-w-md mx-auto mt-2">
+                When you find a station you like, tap the heart icon to save it here for quick access later.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-12" />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {favorites.map((station) => (
+              <StationCard key={station.id} station={station} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

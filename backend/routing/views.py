@@ -235,3 +235,64 @@ def get_route_stations(request):
         import traceback
         traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_station_details(request, place_id):
+    if not place_id:
+        return Response({"error": "Missing place_id"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        url = f"https://api.geoapify.com/v2/place-details?id={place_id}&apiKey={get_geoapify_key()}"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        if not data.get('features'):
+            return Response({"error": "Station not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        props = data['features'][0]['properties']
+        
+        supported_fuels = ['petrol', 'diesel']
+        if 'cng' in str(props.get('name', '')).lower() or 'cng' in str(props.get('street', '')).lower():
+            supported_fuels.append('cng')
+            
+        station = {
+            'id': props.get('place_id'),
+            'name': props.get('name', 'Fuel Station'),
+            'latitude': props.get('lat'),
+            'longitude': props.get('lon'),
+            'address': props.get('formatted', ''),
+            'city': props.get('city', ''),
+            'state': props.get('state', ''),
+            'supported_fuels': supported_fuels,
+            'phone': props.get('contact', {}).get('phone', ''),
+            'opening_hours': props.get('opening_hours', ''),
+            'is_verified': True,
+        }
+        
+        return Response(station)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_station_prices(request, place_id):
+    from stations.models import FuelPrice
+    prices_data = []
+    
+    fuel_types = ['petrol', 'diesel', 'cng']
+    for ft in fuel_types:
+        latest_price = FuelPrice.objects.filter(fuel_type=ft).order_by('-verified_at').first()
+        if latest_price:
+            prices_data.append({
+                'id': latest_price.id,
+                'fuel_type': latest_price.get_fuel_type_display().upper(),
+                'price': str(latest_price.price),
+                'unit': latest_price.unit,
+                'currency': latest_price.currency,
+                'source': latest_price.source or 'Govt Data',
+                'verified_at': latest_price.verified_at.isoformat()
+            })
+            
+    return Response(prices_data)
