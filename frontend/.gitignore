@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
@@ -22,4 +23,46 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.swp
+
+# Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build output and tooling caches
+build
+out
+.eslintcache
+.stylelintcache
+.vite
+.next
+.nuxt
+
+# Testing
+coverage
+.nyc_output
+
+# OS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/

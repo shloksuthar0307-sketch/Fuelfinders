@@ -8,6 +8,7 @@ import Favorites from './pages/Favorites';
 import History from './pages/History';
 import CitiesHub from './pages/CitiesHub';
 import Calculator from './pages/Calculator';
+import { InstallPWA } from './components/InstallPWA';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -15,6 +16,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <InstallPWA />
       <Router>
         <Routes>
           <Route path="/" element={<Layout />}>
