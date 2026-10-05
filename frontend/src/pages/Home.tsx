@@ -58,7 +58,7 @@ const Home = () => {
         ? `${userLocation[0]},${userLocation[1]}` 
         : origin;
         
-      navigate(`/search?origin=${encodeURIComponent(originParam)}&dest=${encodeURIComponent(destination)}`);
+      navigate(`/search?origin=${encodeURIComponent(originParam)}&dest=${encodeURIComponent(destination)}&fuels=${selectedFuels.join(',')}`);
     }
   };
 
@@ -254,18 +254,14 @@ const Home = () => {
           <div>
             <h4 className="text-white font-bold mb-4">Explore Stations</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="hover:text-white transition-colors">Find Nearby Stations</a></li>
               <li><Link to="/cities" className="hover:text-white transition-colors">All City Hubs</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">Highway Corridors</a></li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-white font-bold mb-4">Driver Tools</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="hover:text-white transition-colors">Savings Calculator</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">News & Blogs</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Submit Feedback</a></li>
+              <li><Link to="/calculator" className="hover:text-white transition-colors">Savings Calculator</Link></li>
             </ul>
           </div>
         </div>

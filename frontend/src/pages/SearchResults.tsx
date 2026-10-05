@@ -86,9 +86,19 @@ const SearchResults = () => {
           `${destLat},${destLng}`
         );
         
+        const fuelsQuery = searchParams.get('fuels');
+        const selectedFuels = fuelsQuery ? fuelsQuery.split(',') : [];
+        
+        let stations = routeResponse.stations;
+        if (selectedFuels.length > 0) {
+          stations = stations.filter((s: any) => 
+            s.supported_fuels && s.supported_fuels.some((f: string) => selectedFuels.includes(f.toLowerCase()))
+          );
+        }
+        
         const geometry = routeResponse.route_geometry.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
         setRouteGeometry(geometry);
-        setRouteStations(routeResponse.stations);
+        setRouteStations(stations);
 
       } catch (err: any) {
         setRouteError(err.message || 'Failed to calculate route');

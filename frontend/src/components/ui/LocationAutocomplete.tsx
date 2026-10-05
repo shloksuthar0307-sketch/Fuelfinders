@@ -62,7 +62,7 @@ export const LocationAutocomplete = ({
   const handleSelect = (result: GeocodeResult) => {
     // Ideally we would want to store the lat/lon as well, but 
     // for this UI flow, passing the display_name or coordinates works.
-    onChange(`${result.lat},${result.lon}`);
+    onChange(result.display_name);
     setSuggestions([]);
     setIsOpen(false);
   };
