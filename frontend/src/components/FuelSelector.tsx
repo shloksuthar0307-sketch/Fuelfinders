@@ -27,9 +27,9 @@ export const FuelSelector = ({ selectedFuels, onChange }: FuelSelectorProps) => 
   };
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-3">
       <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Fuel Type</label>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         {FUEL_TYPES.map((fuel) => {
           const isSelected = selectedFuels.includes(fuel.id);
           return (

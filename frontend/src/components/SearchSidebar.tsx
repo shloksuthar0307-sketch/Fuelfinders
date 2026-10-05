@@ -44,9 +44,9 @@ export const SearchSidebar = ({
         
         <CardContent>
           <form onSubmit={onSearch} className="space-y-5">
-            <div className="flex flex-col">
+            <div className="flex flex-col relative gap-3">
               {/* Origin Input */}
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Origin</label>
                 <LocationAutocomplete
                   placeholder="Current location or address"
@@ -56,19 +56,8 @@ export const SearchSidebar = ({
                 />
               </div>
 
-              {/* Swap Button Row */}
-              <div className="relative h-6 w-full flex items-center justify-end pr-6">
-                <div 
-                  className="absolute z-10 top-1/2 -translate-y-1/2 bg-white border border-gray-200 p-1.5 rounded-full shadow-sm hover:shadow-md cursor-pointer text-brand-secondary hover:text-brand-blue transition-all" 
-                  onClick={onSwap}
-                  title="Swap locations"
-                >
-                  <ArrowUpDown className="h-4 w-4" />
-                </div>
-              </div>
-
               {/* Destination Input */}
-              <div className="space-y-1.5">
+              <div className="space-y-2 mt-5">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Destination</label>
                 <LocationAutocomplete
                   placeholder="Where are you going?"
@@ -77,6 +66,16 @@ export const SearchSidebar = ({
                   icon={<MapPin className="h-5 w-5 text-brand-danger" />}
                 />
               </div>
+
+              {/* Swap Button */}
+              <button 
+                type="button"
+                className="absolute z-10 top-1/2 -translate-y-2 left-1/2 -translate-x-1/2 bg-white border border-gray-200 p-2.5 rounded-full shadow-sm hover:shadow-md cursor-pointer text-brand-secondary hover:text-brand-blue transition-all flex items-center justify-center" 
+                onClick={onSwap}
+                title="Swap locations"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="flex justify-end">

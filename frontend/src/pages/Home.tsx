@@ -18,7 +18,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [selectedFuels, setSelectedFuels] = useState<string[]>(['cng']);
+  const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
   
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
