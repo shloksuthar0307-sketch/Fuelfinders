@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { geocodeSearch, fetchStationsAlongRoute } from '../lib/api';
+import { addRouteToHistory } from '../lib/history';
 import MapComponent from '../components/MapComponent';
 import { Loader2, ArrowLeft, Fuel, Navigation, Clock } from 'lucide-react';
 import { StationCard } from '../components/StationCard';
@@ -75,6 +76,14 @@ const SearchResults = () => {
         setRouteDistance(routeResponse.base_distance);
         setRouteTime(routeResponse.base_time);
         setRouteStations(routeResponse.stations || []);
+
+        addRouteToHistory({
+          origin: originQuery,
+          destination: destQuery,
+          fuels: selectedFuels,
+          distance: routeResponse.base_distance,
+          time: routeResponse.base_time,
+        });
 
       } catch (err: any) {
         setRouteError(err.message || 'Failed to calculate route. Ensure you provided valid locations.');
