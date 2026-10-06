@@ -22,7 +22,7 @@ const SearchResults = () => {
   const [sortBy, setSortBy] = useState('detour'); // detour, time
   const [filterFuel, setFilterFuel] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 4;
+  const ITEMS_PER_PAGE = 3;
 
   const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
   const formatTime = (seconds: number) => {
