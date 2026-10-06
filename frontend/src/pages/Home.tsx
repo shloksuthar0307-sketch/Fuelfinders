@@ -97,7 +97,7 @@ const Home = () => {
             </span>
           </h1>
           <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-2">
-            Real-time community queue reports, fuel pressure tracking, and smart zero-detour routing for drivers across the country.
+            Real-time community queue reports, fuel pressure tracking, and smart zero-detour routing for drivers across the country. Compare live prices, discover station amenities, and calculate exactly how much you can save on every trip.
           </p>
         </div>
 
