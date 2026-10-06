@@ -218,15 +218,27 @@ const SearchResults = () => {
                   station={station} 
                   onFavorite={(e) => { e.preventDefault(); }} 
                 />
-                <div className="mt-2 bg-slate-50 rounded-lg p-3 text-sm flex justify-between items-center border border-slate-100">
-                  <div className="flex items-center gap-1.5">
-                    <Navigation className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-slate-600 font-medium">+{((station.detour_distance || 0)).toFixed(1)} km detour</span>
+                <div className="mt-2 bg-slate-50 rounded-lg p-3 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Navigation className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-600 font-medium">+{((station.detour_distance || 0)).toFixed(1)} km detour</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>+{station.extra_time || 0} min</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>+{station.extra_time || 0} min</span>
-                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`, '_blank');
+                    }}
+                    className="w-full sm:w-auto bg-brand-blue text-white rounded-md px-4 py-1.5 text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    Navigate
+                  </button>
                 </div>
               </div>
             ))}
