@@ -210,25 +210,35 @@ def get_route_stations(request):
                     'distance_from_route': dist,
                 })
                 
-        # 4. Rank and limit stations (take top 10 closest to route to avoid abusing Routing API)
-        candidate_stations.sort(key=lambda x: x['distance_from_route'])
-        candidate_stations = candidate_stations[:10]
-        
-        # 5. Calculate detour using routing (or approximate)
-        # We'll use straight line detour approximation here to avoid 20+ routing calls, 
-        # but the formula is: detour = dist(orig, station) + dist(station, dest) - base_dist
-        # Actually, let's use Route Matrix API if possible, or just simple math.
+        # 4. Calculate detour using routing (or approximate)
         for station in candidate_stations:
-            # Approx detour using haversine from origin to station to dest
-            # For exact detour, we'd call Geoapify Routing, but to save time & requests:
             station['detour_distance'] = station['distance_from_route'] * 2 # Rough estimate
-            station['extra_time'] = int((station['detour_distance'] / 30.0) * 60) # Assume 30km/h detour speed
+            station['extra_time'] = int((station['detour_distance'] / 30.0) * 60)
+
+        # 5. Sort stations
+        sort_by = request.data.get('sortBy', 'detour')
+        if sort_by == 'time':
+            candidate_stations.sort(key=lambda x: x['extra_time'])
+        else:
+            candidate_stations.sort(key=lambda x: x['detour_distance'])
+            
+        total_items = len(candidate_stations)
+        
+        # 6. Pagination
+        page = int(request.data.get('page', 1))
+        limit = int(request.data.get('limit', 10))
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        paginated_stations = candidate_stations[start_index:end_index]
         
         return Response({
             "route_geometry": geometry,
             "base_distance": base_distance,
             "base_time": base_time,
-            "stations": candidate_stations
+            "stations": paginated_stations,
+            "total_items": total_items,
+            "current_page": page,
+            "limit": limit
         })
         
     except Exception as e:

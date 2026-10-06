@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { geocodeSearch, fetchStationsAlongRoute } from '../lib/api';
 import { addRouteToHistory } from '../lib/history';
 import MapComponent from '../components/MapComponent';
-import { Loader2, ArrowLeft, Fuel, Navigation, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ArrowLeft, Fuel, Navigation, Clock, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
 import { StationCard } from '../components/StationCard';
 
 const SearchResults = () => {
@@ -22,6 +22,10 @@ const SearchResults = () => {
   const [sortBy, setSortBy] = useState('detour'); // detour, time
   const [filterFuel, setFilterFuel] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [routeOrigin, setRouteOrigin] = useState<{lat: number, lng: number} | null>(null);
+  const [routeDest, setRouteDest] = useState<{lat: number, lng: number} | null>(null);
   const ITEMS_PER_PAGE = 3;
 
   const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
@@ -32,9 +36,9 @@ const SearchResults = () => {
     return `${m}m`;
   };
 
-  // Geocode & Route
+  // Geocode
   useEffect(() => {
-    const fetchRoute = async () => {
+    const geocode = async () => {
       if (!originQuery || !destQuery) return;
       setIsLoadingRoute(true);
       setRouteError('');
@@ -63,15 +67,40 @@ const SearchResults = () => {
           destLat = parseFloat(destRes[0].lat);
           destLng = parseFloat(destRes[0].lon);
         }
+        
+        setRouteOrigin({lat: originLat, lng: originLng});
+        setRouteDest({lat: destLat, lng: destLng});
+      } catch (err: any) {
+        setRouteError(err.message || 'Failed to calculate route. Ensure you provided valid locations.');
+        setIsLoadingRoute(false);
+      }
+    };
+    geocode();
+  }, [originQuery, destQuery]);
 
+  // Fetch Route Stations
+  useEffect(() => {
+    const fetchStations = async () => {
+      if (!routeOrigin || !routeDest) return;
+      setIsLoadingRoute(true);
+      
+      try {
         const fuelsQuery = searchParams.get('fuels');
         const selectedFuels = fuelsQuery ? fuelsQuery.split(',') : [];
 
+        let apiFuels = selectedFuels;
+        if (filterFuel !== 'ALL') {
+          apiFuels = [filterFuel];
+        }
+
         const routeResponse = await fetchStationsAlongRoute(
-          `${originLat},${originLng}`, 
-          `${destLat},${destLng}`,
-          selectedFuels,
-          2.0 // 2km radius
+          `${routeOrigin.lat},${routeOrigin.lng}`, 
+          `${routeDest.lat},${routeDest.lng}`,
+          apiFuels,
+          2.0, // 2km radius
+          currentPage,
+          ITEMS_PER_PAGE,
+          sortBy
         );
         
         const geometry = routeResponse.route_geometry.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
@@ -79,25 +108,25 @@ const SearchResults = () => {
         setRouteDistance(routeResponse.base_distance);
         setRouteTime(routeResponse.base_time);
         setRouteStations(routeResponse.stations || []);
-        setCurrentPage(1);
+        setTotalItems(routeResponse.total_items || 0);
 
-        addRouteToHistory({
-          origin: originQuery,
-          destination: destQuery,
-          fuels: selectedFuels,
-          distance: routeResponse.base_distance,
-          time: routeResponse.base_time,
-        });
-
+        if (currentPage === 1) {
+          addRouteToHistory({
+            origin: originQuery || '',
+            destination: destQuery || '',
+            fuels: selectedFuels,
+            distance: routeResponse.base_distance,
+            time: routeResponse.base_time,
+          });
+        }
       } catch (err: any) {
-        setRouteError(err.message || 'Failed to calculate route. Ensure you provided valid locations.');
+        setRouteError(err.message || 'Failed to calculate route.');
       } finally {
         setIsLoadingRoute(false);
       }
     };
-
-    fetchRoute();
-  }, [originQuery, destQuery]);
+    fetchStations();
+  }, [routeOrigin, routeDest, currentPage, sortBy, filterFuel, originQuery, destQuery]);
 
   let mapCenter: [number, number] = [20.5937, 78.9629];
   if (routeGeometry.length > 0) {
@@ -106,19 +135,7 @@ const SearchResults = () => {
     mapCenter = [routeStations[0].latitude, routeStations[0].longitude];
   }
 
-  const filteredStations = routeStations.filter((station) => {
-    if (filterFuel === 'ALL') return true;
-    return station.supported_fuels && station.supported_fuels.map((f: string) => f.toLowerCase()).includes(filterFuel.toLowerCase());
-  });
 
-  const sortedStations = [...filteredStations].sort((a, b) => {
-    if (sortBy === 'detour') {
-      return (a.detour_distance || 0) - (b.detour_distance || 0);
-    } else if (sortBy === 'time') {
-      return (a.extra_time || 0) - (b.extra_time || 0);
-    }
-    return 0; 
-  });
 
   return (
     <div className="flex-1 flex flex-col md:flex-row relative h-[calc(100vh-4rem)]">
@@ -164,40 +181,62 @@ const SearchResults = () => {
           
           {/* Controls */}
           {!isLoadingRoute && !routeError && routeStations.length > 0 && (
-            <div className="px-4 py-3 bg-white/40 border-b border-gray-100 flex flex-wrap justify-between items-center gap-y-2 backdrop-blur-md">
-              <span className="text-sm font-semibold text-brand-navy">{filteredStations.length} stations found</span>
-              <div className="flex items-center space-x-3 text-sm">
-                <div className="flex items-center space-x-1">
-                  <span className="text-brand-secondary text-xs">Fuel:</span>
-                  <select 
-                    value={filterFuel}
-                    onChange={(e) => {
-                      setFilterFuel(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
-                  >
-                    <option value="ALL">All</option>
-                    <option value="PETROL">Petrol</option>
-                    <option value="DIESEL">Diesel</option>
-                    <option value="CNG">CNG</option>
-                  </select>
+            <div className="px-4 py-3 bg-white/40 border-b border-gray-100 flex flex-wrap justify-between items-center gap-y-2 backdrop-blur-md relative z-20">
+              <span className="text-sm font-semibold text-brand-navy">{totalItems} stations found</span>
+              
+              <button 
+                onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm font-medium text-slate-700 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <Filter className="w-4 h-4 text-brand-blue" />
+                Filters
+              </button>
+
+              {isFilterMenuOpen && (
+                <div className="absolute right-4 top-14 z-50 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+                    <h3 className="font-semibold text-slate-800 text-sm">Sort & Filter</h3>
+                    <button 
+                      onClick={() => setIsFilterMenuOpen(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Fuel Type</label>
+                      <select 
+                        value={filterFuel}
+                        onChange={(e) => {
+                          setFilterFuel(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full bg-slate-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                      >
+                        <option value="ALL">All</option>
+                        <option value="PETROL">Petrol</option>
+                        <option value="DIESEL">Diesel</option>
+                        <option value="CNG">CNG</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Sort by</label>
+                      <select 
+                        value={sortBy}
+                        onChange={(e) => {
+                          setSortBy(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full bg-slate-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                      >
+                        <option value="detour">Shortest Detour</option>
+                        <option value="time">Least Extra Time</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1 text-sm">
-                  <span className="text-brand-secondary text-xs">Sort by:</span>
-                  <select 
-                    value={sortBy}
-                    onChange={(e) => {
-                      setSortBy(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
-                  >
-                    <option value="detour">Shortest Detour</option>
-                    <option value="time">Least Extra Time</option>
-                  </select>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -216,7 +255,7 @@ const SearchResults = () => {
               </div>
             )}
             
-            {!isLoadingRoute && sortedStations.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((station, idx) => {
+            {!isLoadingRoute && routeStations.map((station, idx) => {
               const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
               return (
               <div key={station.id} className="relative">
@@ -254,7 +293,7 @@ const SearchResults = () => {
               </div>
             )})}
 
-            {!isLoadingRoute && !routeError && sortedStations.length > ITEMS_PER_PAGE && (
+            {!isLoadingRoute && !routeError && totalItems > ITEMS_PER_PAGE && (
               <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -264,11 +303,11 @@ const SearchResults = () => {
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-sm font-medium text-brand-secondary">
-                  Page {currentPage} of {Math.ceil(sortedStations.length / ITEMS_PER_PAGE)}
+                  Page {currentPage} of {Math.ceil(totalItems / ITEMS_PER_PAGE)}
                 </span>
                 <button 
-                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(sortedStations.length / ITEMS_PER_PAGE), p + 1))}
-                  disabled={currentPage === Math.ceil(sortedStations.length / ITEMS_PER_PAGE)}
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalItems / ITEMS_PER_PAGE), p + 1))}
+                  disabled={currentPage === Math.ceil(totalItems / ITEMS_PER_PAGE)}
                   className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-brand-navy"
                 >
                   <ChevronRight className="w-5 h-5" />

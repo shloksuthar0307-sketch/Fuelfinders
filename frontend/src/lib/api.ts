@@ -114,14 +114,27 @@ export interface AlongRouteResponse {
   route_geometry: [number, number][]; // [lon, lat]
   base_distance: number;
   base_time: number;
+  total_items?: number;
+  current_page?: number;
 }
 
-export const fetchStationsAlongRoute = async (origin: string, dest: string, fuels: string[] = [], tolerance: number = 2): Promise<AlongRouteResponse> => {
+export const fetchStationsAlongRoute = async (
+  origin: string, 
+  dest: string, 
+  fuels: string[] = [], 
+  tolerance: number = 2,
+  page: number = 1,
+  limit: number = 10,
+  sortBy: string = 'detour'
+): Promise<AlongRouteResponse> => {
   const response = await apiClient.post<AlongRouteResponse>('/routing/route-stations/', {
     origin,
     destination: dest,
     fuels,
-    tolerance
+    tolerance,
+    page,
+    limit,
+    sortBy
   });
   return response.data;
 };
