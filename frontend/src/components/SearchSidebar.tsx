@@ -41,33 +41,33 @@ export const SearchSidebar = ({
           <CardTitle>Find Fuel Stations</CardTitle>
           <CardDescription>Plan smarter. Refuel anywhere.</CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={onSearch} className="space-y-5">
             <div className="flex flex-col relative gap-3">
               {/* Origin Input */}
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Origin</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Origin</label>
+                </div>
                 <LocationAutocomplete
                   placeholder="Current location or address"
                   value={origin}
                   onChange={setOrigin}
                   icon={<Navigation2 className="h-5 w-5 text-brand-blue" />}
                 />
-                <div className="flex justify-end -mt-1 mb-2">
-                  <Button 
-                    type="button" 
-                    variant="ghost"
-                    size="sm"
-                    onClick={onGetCurrentLocation}
-                    disabled={isLocating}
-                    className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
-                  >
-                    {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
-                    Use My Current Location
-                  </Button>
-                </div>
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onGetCurrentLocation}
+                disabled={isLocating}
+                className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
+              >
+                {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
+                Use My Current Location
+              </Button>
               {/* Destination Input */}
               <div className="space-y-2 mt-5">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Destination</label>
@@ -80,9 +80,9 @@ export const SearchSidebar = ({
               </div>
 
               {/* Swap Button */}
-              <button 
+              <button
                 type="button"
-                className="absolute z-10 top-1/2 -translate-y-2 left-1/2 -translate-x-1/2 bg-white border border-gray-200 p-2.5 rounded-full shadow-sm hover:shadow-md cursor-pointer text-brand-secondary hover:text-brand-blue transition-all flex items-center justify-center" 
+                className="absolute z-10 top-1/2 -translate-y-2 left-1/2 -translate-x-1/2 bg-white border border-gray-200 p-2.5 rounded-full shadow-sm hover:shadow-md cursor-pointer text-brand-secondary hover:text-brand-blue transition-all flex items-center justify-center"
                 onClick={onSwap}
                 title="Swap locations"
               >
