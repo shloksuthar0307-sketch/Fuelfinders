@@ -49,6 +49,17 @@ export const SearchSidebar = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Origin</label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onGetCurrentLocation}
+                    disabled={isLocating}
+                    className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
+                  >
+                    {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
+                    Use My Current Location
+                  </Button>
                 </div>
                 <LocationAutocomplete
                   placeholder="Current location or address"
@@ -57,17 +68,6 @@ export const SearchSidebar = ({
                   icon={<Navigation2 className="h-5 w-5 text-brand-blue" />}
                 />
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onGetCurrentLocation}
-                disabled={isLocating}
-                className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
-              >
-                {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
-                Use My Current Location
-              </Button>
               {/* Destination Input */}
               <div className="space-y-2 mt-5">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Destination</label>

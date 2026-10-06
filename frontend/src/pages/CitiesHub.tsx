@@ -29,8 +29,8 @@ const CITIES_DATA = [
   {
     state: "Gujarat",
     cities: [
-      { name: "Ahmedabad", stations: "310+" },
-      { name: "Surat", stations: "160+" },
+      { name: "Ahmedabad", stations: "400+" },
+      { name: "Surat", stations: "300+" },
       { name: "Vadodara", stations: "120+" },
       { name: "Rajkot", stations: "75+" },
       { name: "Bhavnagar", stations: "30+" },
