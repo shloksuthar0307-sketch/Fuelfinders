@@ -20,7 +20,14 @@ const SearchResults = () => {
 
   const [routeStations, setRouteStations] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('detour'); // detour, time
-  const [filterFuel, setFilterFuel] = useState('ALL');
+  const [filterFuel, setFilterFuel] = useState(() => {
+    const fuels = searchParams.get('fuels');
+    if (fuels) {
+      const fuelsArr = fuels.split(',');
+      if (fuelsArr.length === 1) return fuelsArr[0].toLowerCase();
+    }
+    return 'all';
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
@@ -89,7 +96,7 @@ const SearchResults = () => {
         const selectedFuels = fuelsQuery ? fuelsQuery.split(',') : [];
 
         let apiFuels = selectedFuels;
-        if (filterFuel !== 'ALL') {
+        if (filterFuel !== 'all' && filterFuel !== 'ALL') {
           apiFuels = [filterFuel];
         }
 
@@ -214,10 +221,10 @@ const SearchResults = () => {
                         }}
                         className="w-full bg-slate-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                       >
-                        <option value="ALL">All</option>
-                        <option value="PETROL">Petrol</option>
-                        <option value="DIESEL">Diesel</option>
-                        <option value="CNG">CNG</option>
+                        <option value="all">All</option>
+                        <option value="petrol">Petrol</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="cng">CNG</option>
                       </select>
                     </div>
                     <div className="space-y-2">
