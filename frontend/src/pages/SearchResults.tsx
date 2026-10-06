@@ -20,6 +20,7 @@ const SearchResults = () => {
 
   const [routeStations, setRouteStations] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('detour'); // detour, time
+  const [filterFuel, setFilterFuel] = useState('ALL');
 
   const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
   const formatTime = (seconds: number) => {
@@ -102,7 +103,12 @@ const SearchResults = () => {
     mapCenter = [routeStations[0].latitude, routeStations[0].longitude];
   }
 
-  const sortedStations = [...routeStations].sort((a, b) => {
+  const filteredStations = routeStations.filter((station) => {
+    if (filterFuel === 'ALL') return true;
+    return station.supported_fuels && station.supported_fuels.map((f: string) => f.toLowerCase()).includes(filterFuel.toLowerCase());
+  });
+
+  const sortedStations = [...filteredStations].sort((a, b) => {
     if (sortBy === 'detour') {
       return (a.detour_distance || 0) - (b.detour_distance || 0);
     } else if (sortBy === 'time') {
@@ -155,18 +161,33 @@ const SearchResults = () => {
           
           {/* Controls */}
           {!isLoadingRoute && !routeError && routeStations.length > 0 && (
-            <div className="px-4 py-3 bg-white/40 border-b border-gray-100 flex justify-between items-center backdrop-blur-md">
-              <span className="text-sm font-semibold text-brand-navy">{routeStations.length} stations found</span>
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="text-brand-secondary text-xs">Sort by:</span>
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
-                >
-                  <option value="detour">Shortest Detour</option>
-                  <option value="time">Least Extra Time</option>
-                </select>
+            <div className="px-4 py-3 bg-white/40 border-b border-gray-100 flex flex-wrap justify-between items-center gap-y-2 backdrop-blur-md">
+              <span className="text-sm font-semibold text-brand-navy">{filteredStations.length} stations found</span>
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="flex items-center space-x-1">
+                  <span className="text-brand-secondary text-xs">Fuel:</span>
+                  <select 
+                    value={filterFuel}
+                    onChange={(e) => setFilterFuel(e.target.value)}
+                    className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="PETROL">Petrol</option>
+                    <option value="DIESEL">Diesel</option>
+                    <option value="CNG">CNG</option>
+                  </select>
+                </div>
+                <div className="flex items-center space-x-1 text-sm">
+                  <span className="text-brand-secondary text-xs">Sort by:</span>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
+                  >
+                    <option value="detour">Shortest Detour</option>
+                    <option value="time">Least Extra Time</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
