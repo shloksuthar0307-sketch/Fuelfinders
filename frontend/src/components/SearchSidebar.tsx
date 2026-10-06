@@ -54,8 +54,20 @@ export const SearchSidebar = ({
                   onChange={setOrigin}
                   icon={<Navigation2 className="h-5 w-5 text-brand-blue" />}
                 />
+                <div className="flex justify-end -mt-1 mb-2">
+                  <Button 
+                    type="button" 
+                    variant="ghost"
+                    size="sm"
+                    onClick={onGetCurrentLocation}
+                    disabled={isLocating}
+                    className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
+                  >
+                    {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
+                    Use My Current Location
+                  </Button>
+                </div>
               </div>
-
               {/* Destination Input */}
               <div className="space-y-2 mt-5">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Destination</label>
@@ -76,20 +88,6 @@ export const SearchSidebar = ({
               >
                 <ArrowUpDown className="h-4 w-4" />
               </button>
-            </div>
-
-            <div className="flex justify-end">
-              <Button 
-                type="button" 
-                variant="ghost"
-                size="sm"
-                onClick={onGetCurrentLocation}
-                disabled={isLocating}
-                className="text-xs text-brand-blue hover:text-blue-700 p-0 h-auto font-medium"
-              >
-                {isLocating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <MapPin className="h-3 w-3 mr-1" />}
-                Use My Current Location
-              </Button>
             </div>
 
             <FuelSelector selectedFuels={selectedFuels} onChange={setSelectedFuels} />

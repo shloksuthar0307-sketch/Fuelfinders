@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { geocodeSearch, fetchStationsAlongRoute } from '../lib/api';
 import { addRouteToHistory } from '../lib/history';
 import MapComponent from '../components/MapComponent';
-import { Loader2, ArrowLeft, Fuel, Navigation, Clock } from 'lucide-react';
+import { Loader2, ArrowLeft, Fuel, Navigation, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StationCard } from '../components/StationCard';
 
 const SearchResults = () => {
@@ -21,6 +21,8 @@ const SearchResults = () => {
   const [routeStations, setRouteStations] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState('detour'); // detour, time
   const [filterFuel, setFilterFuel] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 4;
 
   const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
   const formatTime = (seconds: number) => {
@@ -77,6 +79,7 @@ const SearchResults = () => {
         setRouteDistance(routeResponse.base_distance);
         setRouteTime(routeResponse.base_time);
         setRouteStations(routeResponse.stations || []);
+        setCurrentPage(1);
 
         addRouteToHistory({
           origin: originQuery,
@@ -168,7 +171,10 @@ const SearchResults = () => {
                   <span className="text-brand-secondary text-xs">Fuel:</span>
                   <select 
                     value={filterFuel}
-                    onChange={(e) => setFilterFuel(e.target.value)}
+                    onChange={(e) => {
+                      setFilterFuel(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
                   >
                     <option value="ALL">All</option>
@@ -181,7 +187,10 @@ const SearchResults = () => {
                   <span className="text-brand-secondary text-xs">Sort by:</span>
                   <select 
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="bg-transparent text-brand-blue font-medium focus:outline-none cursor-pointer text-sm outline-none"
                   >
                     <option value="detour">Shortest Detour</option>
@@ -207,9 +216,11 @@ const SearchResults = () => {
               </div>
             )}
             
-            {!isLoadingRoute && sortedStations.map((station, idx) => (
+            {!isLoadingRoute && sortedStations.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((station, idx) => {
+              const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
+              return (
               <div key={station.id} className="relative">
-                {idx === 0 && (
+                {globalIdx === 0 && (
                   <div className="absolute -top-3 right-4 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm border border-emerald-400">
                     BEST OPTION
                   </div>
@@ -241,7 +252,29 @@ const SearchResults = () => {
                   </button>
                 </div>
               </div>
-            ))}
+            )})}
+
+            {!isLoadingRoute && !routeError && sortedStations.length > ITEMS_PER_PAGE && (
+              <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-brand-navy"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm font-medium text-brand-secondary">
+                  Page {currentPage} of {Math.ceil(sortedStations.length / ITEMS_PER_PAGE)}
+                </span>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(sortedStations.length / ITEMS_PER_PAGE), p + 1))}
+                  disabled={currentPage === Math.ceil(sortedStations.length / ITEMS_PER_PAGE)}
+                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-brand-navy"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
 
             {!isLoadingRoute && !routeError && routeStations.length === 0 && (
               <div className="text-center py-10 text-brand-secondary">
