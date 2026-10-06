@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SearchSidebar } from '../components/SearchSidebar';
-import { Clock, Map as MapIcon, Calculator, ChevronRight, Fuel, ShieldCheck, Laptop, Zap } from 'lucide-react';
+import { Clock, Map as MapIcon, Calculator, ChevronRight, Fuel, ShieldCheck, Smartphone, Zap } from 'lucide-react';
 
 const CITIES = [
   { name: 'Delhi NCR', count: '520+' },
@@ -22,6 +22,31 @@ const Home = () => {
   
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User ${outcome === 'accepted' ? 'accepted' : 'dismissed'} the install prompt`);
+      setDeferredPrompt(null);
+    } else {
+      alert("App installation is not supported by your browser, or it's already installed.");
+    }
+  };
 
   const handleSwap = () => {
     setOrigin(destination);
@@ -234,17 +259,20 @@ const Home = () => {
         <div className="max-w-4xl mx-auto bg-gradient-to-br from-slate-900 via-slate-900 to-red-950 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-red-900/10 border border-slate-800">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center shrink-0 shadow-lg shadow-red-600/20">
-              <Laptop className="h-8 w-8 text-white" />
+              <Smartphone className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-white mb-2">Get the Web App</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Get the Mobile App</h3>
               <p className="text-slate-300 max-w-sm">
                 Access GPS live navigation, turn-by-turn routing, and instant community queue alerts on the go.
               </p>
             </div>
           </div>
-          <button className="whitespace-nowrap bg-white text-red-700 hover:bg-red-50 px-6 py-3 rounded-xl font-bold transition-colors inline-flex items-center shadow-md">
-            Open Web App
+          <button 
+            onClick={handleInstallClick}
+            className="whitespace-nowrap bg-white text-red-700 hover:bg-red-50 px-6 py-3 rounded-xl font-bold transition-colors inline-flex items-center shadow-md"
+          >
+            Open Mobile app
             <ChevronRight className="ml-1 h-4 w-4" />
           </button>
         </div>
