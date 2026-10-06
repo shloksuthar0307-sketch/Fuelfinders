@@ -88,8 +88,9 @@ const Calculator = () => {
               <label className="text-sm font-semibold text-slate-600">Daily Distance Driven (km)</label>
               <input 
                 type="number" 
+                min="0"
                 value={dailyKm} 
-                onChange={(e) => setDailyKm(Number(e.target.value))}
+                onChange={(e) => setDailyKm(Math.max(0, Number(e.target.value)))}
                 className="w-full p-3 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -97,8 +98,9 @@ const Calculator = () => {
               <label className="text-sm font-semibold text-slate-600">Mileage on Petrol (km/litre)</label>
               <input 
                 type="number" 
+                min="0"
                 value={petrolMileage} 
-                onChange={(e) => setPetrolMileage(Number(e.target.value))}
+                onChange={(e) => setPetrolMileage(Math.max(0, Number(e.target.value)))}
                 className="w-full p-3 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -106,8 +108,9 @@ const Calculator = () => {
               <label className="text-sm font-semibold text-slate-600">Mileage on CNG (km/kg)</label>
               <input 
                 type="number" 
+                min="0"
                 value={cngMileage} 
-                onChange={(e) => setCngMileage(Number(e.target.value))}
+                onChange={(e) => setCngMileage(Math.max(0, Number(e.target.value)))}
                 className="w-full p-3 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -115,8 +118,9 @@ const Calculator = () => {
               <label className="text-sm font-semibold text-slate-600">Petrol Price (₹/litre)</label>
               <input 
                 type="number" 
+                min="0"
                 value={petrolPrice} 
-                onChange={(e) => setPetrolPrice(Number(e.target.value))}
+                onChange={(e) => setPetrolPrice(Math.max(0, Number(e.target.value)))}
                 className="w-full p-3 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -124,8 +128,9 @@ const Calculator = () => {
               <label className="text-sm font-semibold text-slate-600">CNG Price (₹/kg)</label>
               <input 
                 type="number" 
+                min="0"
                 value={cngPrice} 
-                onChange={(e) => setCngPrice(Number(e.target.value))}
+                onChange={(e) => setCngPrice(Math.max(0, Number(e.target.value)))}
                 className="w-full p-3 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
