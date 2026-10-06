@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchCityStations } from '../lib/api';
 import MapComponent from '../components/MapComponent';
-import { Loader2, ArrowLeft, Fuel } from 'lucide-react';
+import { Loader2, ArrowLeft, Fuel, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StationCard } from '../components/StationCard';
 
 const CityStations = () => {
@@ -12,6 +12,8 @@ const CityStations = () => {
   const [mapCenter, setMapCenter] = useState<[number, number]>([20.5937, 78.9629]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 4;
 
   useEffect(() => {
     const loadCityStations = async () => {
@@ -29,6 +31,7 @@ const CityStations = () => {
         setError(err.message || 'Failed to fetch stations for this city.');
       } finally {
         setIsLoading(false);
+        setCurrentPage(1);
       }
     };
 
@@ -81,7 +84,7 @@ const CityStations = () => {
               </div>
             )}
             
-            {!isLoading && cityStations.map((station) => (
+            {!isLoading && cityStations.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((station) => (
               <div key={station.id} className="relative">
                 <StationCard 
                   station={station} 
@@ -89,6 +92,28 @@ const CityStations = () => {
                 />
               </div>
             ))}
+
+            {!isLoading && !error && cityStations.length > ITEMS_PER_PAGE && (
+              <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-brand-navy"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm font-medium text-brand-secondary">
+                  Page {currentPage} of {Math.ceil(cityStations.length / ITEMS_PER_PAGE)}
+                </span>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(cityStations.length / ITEMS_PER_PAGE), p + 1))}
+                  disabled={currentPage === Math.ceil(cityStations.length / ITEMS_PER_PAGE)}
+                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-brand-navy"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
 
             {!isLoading && !error && cityStations.length === 0 && (
               <div className="text-center py-10 text-brand-secondary">

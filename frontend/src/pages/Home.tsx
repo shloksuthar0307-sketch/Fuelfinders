@@ -92,7 +92,7 @@ const Home = () => {
           
           <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
             India's Most Intelligent <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-900 to-red-600">
               Fuel & Queue Finder
             </span>
           </h1>
