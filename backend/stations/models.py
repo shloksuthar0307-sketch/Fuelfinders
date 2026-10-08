@@ -19,6 +19,7 @@ class FuelStation(models.Model):
     phone = models.CharField(max_length=50, blank=True, null=True)
     opening_hours = models.CharField(max_length=255, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    is_manually_edited = models.BooleanField(default=False)
     
     last_synced_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

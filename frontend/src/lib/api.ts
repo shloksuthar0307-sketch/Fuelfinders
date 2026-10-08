@@ -35,8 +35,9 @@ export interface FuelPrice {
 }
 
 export interface FuelStation {
-  id: number;
-  external_source_id: string | null;
+  id: string | number;
+  db_id?: number;
+  external_source_id?: string | null;
   name: string;
   latitude: number;
   longitude: number;
@@ -47,11 +48,68 @@ export interface FuelStation {
   phone: string;
   opening_hours: string;
   is_verified: boolean;
-  prices: FuelPrice[];
+  source?: 'manual' | 'geoapify';
+  prices?: FuelPrice[];
 }
 
 export const fetchStations = async (): Promise<FuelStation[]> => {
   const response = await apiClient.get('/stations/');
+  return response.data;
+};
+
+// Admin Auth
+export const login = async (username: string, password: string): Promise<string> => {
+  const response = await apiClient.post('/auth/login/', { username, password });
+  return response.data.token;
+};
+
+export const setAuthToken = (token: string | null) => {
+  if (token) {
+    apiClient.defaults.headers.common['Authorization'] = `Token ${token}`;
+    localStorage.setItem('adminToken', token);
+  } else {
+    delete apiClient.defaults.headers.common['Authorization'];
+    localStorage.removeItem('adminToken');
+  }
+};
+
+// Initialize token from storage
+const initialToken = localStorage.getItem('adminToken');
+if (initialToken) {
+  setAuthToken(initialToken);
+}
+
+// Admin APIs
+export const createStation = async (data: Partial<FuelStation>): Promise<FuelStation> => {
+  const response = await apiClient.post('/stations/', data);
+  return response.data;
+};
+
+export const updateStation = async (id: number, data: Partial<FuelStation>): Promise<FuelStation> => {
+  const response = await apiClient.patch(`/stations/${id}/`, data);
+  return response.data;
+};
+
+export const deleteStation = async (id: number): Promise<void> => {
+  await apiClient.delete(`/stations/${id}/`);
+};
+
+export const createPrice = async (stationId: number, data: Partial<FuelPrice>): Promise<FuelPrice> => {
+  const response = await apiClient.post(`/stations/${stationId}/prices/`, data);
+  return response.data;
+};
+
+export const updatePrice = async (id: number, data: Partial<FuelPrice>): Promise<FuelPrice> => {
+  const response = await apiClient.patch(`/stations/prices/${id}/`, data);
+  return response.data;
+};
+
+export const deletePrice = async (id: number): Promise<void> => {
+  await apiClient.delete(`/stations/prices/${id}/`);
+};
+
+export const importGeoapify = async (city: string): Promise<{ added: number, updated: number }> => {
+  const response = await apiClient.post('/stations/import-geoapify/', { city });
   return response.data;
 };
 
@@ -63,11 +121,35 @@ export interface GeocodeResult {
 }
 
 export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => {
+  if (!query || query.trim() === '') {
+    return [];
+  }
+
   try {
-    const response = await apiClient.get('/routing/geocode/', { params: { q: query } });
-    return response.data;
-  } catch (error) {
-    console.error("Geocoding Error:", error);
+    const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    if (!GEOAPIFY_API_KEY) {
+      console.error("Geocoding Error: Missing Geoapify API key");
+      return [];
+    }
+
+    const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query)}&filter=countrycode:in&limit=5&apiKey=${GEOAPIFY_API_KEY}`;
+    
+    // Using global axios (or fetch) to call external API directly
+    const response = await axios.get(url);
+    
+    if (!response.data || !response.data.features) {
+      console.error("Geocoding Error: Invalid API response");
+      return [];
+    }
+
+    return response.data.features.map((feature: any) => ({
+      place_id: feature.properties.place_id,
+      lat: String(feature.properties.lat),
+      lon: String(feature.properties.lon),
+      display_name: feature.properties.formatted
+    }));
+  } catch (error: any) {
+    console.error("Geocoding Error: Network or API error", error.message || error);
     return [];
   }
 };

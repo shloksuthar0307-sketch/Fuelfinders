@@ -21,10 +21,11 @@ L.Icon.Default.mergeOptions({
 });
 
 // Custom icons
-const createIcon = (color: string) => {
+const createIcon = (color: string, isManual: boolean) => {
+  const borderStyle = isManual ? 'border: 3px solid #FCD34D;' : 'border: 3px solid white;'; // Gold border for manual
   return new L.DivIcon({
     className: 'custom-marker',
-    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; ${borderStyle} box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
     popupAnchor: [0, -12],
@@ -59,20 +60,43 @@ const AutoFitBounds = ({ routeGeometry, stations, center, zoom }: any) => {
 };
 
 const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, userLocation, routeGeometry = [] }: MapComponentProps) => {
-  const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY || '88746cf83b5445c19d3035dd394383c7';
+  const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+  if (!geoapifyKey) {
+    console.error("VITE_GEOAPIFY_API_KEY is not defined");
+  }
 
   return (
     <div className="w-full h-full relative z-0">
+      <div className="absolute top-4 right-4 z-[400] bg-white p-3 rounded-xl shadow-md border border-gray-100 text-xs font-medium">
+        <h4 className="mb-2 text-gray-700 font-bold border-b pb-1">Legend</h4>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-blue-600 border-[2px] border-white shadow-sm"></div>
+            <span>Geoapify Station</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-blue-600 border-[2px] border-amber-300 shadow-sm"></div>
+            <span>Manual / Verified</span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+            <span className="text-[10px] text-gray-500">Has CNG</span>
+          </div>
+        </div>
+      </div>
+
       <MapContainer 
         center={center} 
         zoom={zoom} 
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Powered by Geoapify'
-          url={`https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=${geoapifyKey}`}
-        />
+        {geoapifyKey && (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Powered by Geoapify'
+            url={`https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=${geoapifyKey}`}
+          />
+        )}
 
         <AutoFitBounds routeGeometry={routeGeometry} stations={stations} center={center} zoom={zoom} />
 
@@ -111,17 +135,35 @@ const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, us
           if (isCNG) color = '#10B981'; // success
           else if (isPetrol) color = '#F97316'; // orange
 
+          const isManual = station.source === 'manual';
+
           return (
             <Marker 
               key={station.id} 
               position={[station.latitude, station.longitude]} 
-              icon={createIcon(color)}
+              icon={createIcon(color, isManual)}
             >
               <Popup className="custom-popup">
-                <div className="p-1 min-w-[180px] font-sans">
-                  <h3 className="font-bold text-base text-gray-900 mb-1">{station.name}</h3>
+                <div className="p-1 min-w-[200px] font-sans">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-bold text-base text-gray-900 leading-tight pr-2">{station.name}</h3>
+                    {station.is_verified && (
+                      <span className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0">Verified</span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mb-2">{station.address || `${station.city}, ${station.state}`}</p>
                   
+                  {station.prices && station.prices.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-100 p-2 rounded mb-3 text-xs">
+                      {station.prices.map((p, i) => (
+                        <div key={i} className="flex justify-between font-medium text-gray-800 mb-1 last:mb-0">
+                          <span>{p.fuel_type}:</span>
+                          <span>{p.price} {p.currency}/{p.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {(station as any).detour_distance !== undefined && (
                     <div className="bg-blue-50 border border-blue-100 p-2 rounded mb-3 text-xs">
                       <div className="flex justify-between font-medium text-blue-800">
@@ -135,7 +177,7 @@ const MapComponent = ({ stations = [], center = [20.5937, 78.9629], zoom = 5, us
                     </div>
                   )}
 
-                  <div className="flex gap-1 flex-wrap mb-3">
+                  <div className="flex gap-1 flex-wrap mb-3 mt-2">
                     {station.supported_fuels.map(f => (
                       <span key={f} className="px-1.5 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded uppercase tracking-wider">
                         {f}

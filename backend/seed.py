@@ -8,8 +8,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Core.settings')
 django.setup()
 
 from stations.models import FuelStation, FuelPrice
+from django.contrib.auth.models import User
 
 def seed():
+    # Create superuser for admin panel
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('admin', 'admin@example.com', 'admin')
+        print("Created admin user (admin/admin)")
+
     stations_data = [
         {
             "name": "Reliance Petrol Pump",
@@ -20,7 +26,8 @@ def seed():
             "state": "Maharashtra",
             "supported_fuels": ["petrol", "diesel"],
             "phone": "+91-9876543210",
-            "is_verified": True
+            "is_verified": True,
+            "is_manually_edited": True
         },
         {
             "name": "Mahanagar Gas CNG Station",
@@ -31,7 +38,8 @@ def seed():
             "state": "Maharashtra",
             "supported_fuels": ["cng"],
             "phone": "+91-8765432109",
-            "is_verified": True
+            "is_verified": True,
+            "is_manually_edited": True
         },
         {
             "name": "IndianOil",
@@ -42,7 +50,8 @@ def seed():
             "state": "Delhi",
             "supported_fuels": ["petrol", "diesel", "cng"],
             "phone": "",
-            "is_verified": False
+            "is_verified": False,
+            "is_manually_edited": True
         }
     ]
 

@@ -1,16 +1,23 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import FuelStation, FuelPrice
 from .serializers import FuelStationSerializer, FuelPriceSerializer
 
-class FuelStationViewSet(viewsets.ReadOnlyModelViewSet):
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return bool(request.user and request.user.is_staff)
+
+class FuelStationViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for viewing fuel stations.
-    Read-only for public access. Admin can manage via Django admin.
+    ViewSet for viewing and managing fuel stations.
+    Read-only for public access. Admin can perform CRUD.
     """
     queryset = FuelStation.objects.all()
     serializer_class = FuelStationSerializer
+    permission_classes = [IsAdminOrReadOnly]
     
     # We will implement geospatial queries here later (e.g., nearby, along-route)
     
@@ -107,9 +114,112 @@ class FuelStationViewSet(viewsets.ReadOnlyModelViewSet):
             "route_geometry": geometry
         })
 
-    @action(detail=True, methods=['get'], url_path='prices')
+    @action(detail=False, methods=['post'], url_path='import-geoapify')
+    def import_geoapify(self, request):
+        city = request.query_params.get('city') or request.data.get('city')
+        if not city:
+            return Response({"error": "City is required"}, status=400)
+            
+        import requests
+        from django.utils import timezone
+        from django.conf import settings
+        
+        GEOAPIFY_API_KEY = settings.GEOAPIFY_API_KEY
+        geocode_url = f"https://api.geoapify.com/v1/geocode/search?text={city}&format=json&apiKey={GEOAPIFY_API_KEY}"
+        resp = requests.get(geocode_url)
+        if not resp.ok:
+            return Response({"error": "Geocoding failed"}, status=400)
+            
+        data = resp.json()
+        if not data.get('results'):
+            return Response({"error": "City not found"}, status=404)
+            
+        bbox = data['results'][0].get('bbox')
+        if not bbox:
+            return Response({"error": "No bounding box found for city"}, status=400)
+            
+        lon_min, lat_min, lon_max, lat_max = bbox
+        
+        places_url = (
+            f"https://api.geoapify.com/v2/places?"
+            f"categories=commercial.vehicle.fuel&"
+            f"filter=rect:{lon_min},{lat_min},{lon_max},{lat_max}&"
+            f"limit=50&apiKey={GEOAPIFY_API_KEY}"
+        )
+        places_resp = requests.get(places_url)
+        if not places_resp.ok:
+            return Response({"error": "Places API failed"}, status=400)
+            
+        places_data = places_resp.json()
+        features = places_data.get('features', [])
+        
+        added = 0
+        updated = 0
+        
+        for feature in features:
+            props = feature['properties']
+            place_id = props.get('place_id')
+            if not place_id:
+                continue
+                
+            name = props.get('name', 'Unknown Fuel Station')
+            lat = props.get('lat')
+            lon = props.get('lon')
+            address = props.get('formatted', '')
+            state = props.get('state', '')
+            phone = props.get('contact', {}).get('phone', '')
+            
+            station, created = FuelStation.objects.get_or_create(
+                external_source_id=place_id,
+                defaults={
+                    'name': name[:255],
+                    'latitude': lat,
+                    'longitude': lon,
+                    'address': address,
+                    'city': city[:100],
+                    'state': state[:100],
+                    'phone': phone[:50] if isinstance(phone, str) else '',
+                    'last_synced_at': timezone.now()
+                }
+            )
+            
+            if created:
+                added += 1
+            else:
+                if not station.is_manually_edited:
+                    station.name = name[:255]
+                    station.latitude = lat
+                    station.longitude = lon
+                    station.address = address
+                    station.city = city[:100]
+                    station.state = state[:100]
+                    station.phone = phone[:50] if isinstance(phone, str) else ''
+                station.last_synced_at = timezone.now()
+                station.save()
+                updated += 1
+                
+        return Response({"added": added, "updated": updated})
+
+    @action(detail=True, methods=['get', 'post'], url_path='prices')
     def get_prices(self, request, pk=None):
         station = self.get_object()
+        if request.method == 'POST':
+            serializer = FuelPriceSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(station=station)
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=400)
+            
         prices = station.prices.all()
         serializer = FuelPriceSerializer(prices, many=True)
         return Response(serializer.data)
+
+class FuelPriceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing fuel prices.
+    Only admin can modify.
+    """
+    queryset = FuelPrice.objects.all()
+    serializer_class = FuelPriceSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    http_method_names = ['get', 'patch', 'delete']

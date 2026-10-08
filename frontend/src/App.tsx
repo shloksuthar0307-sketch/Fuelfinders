@@ -10,6 +10,10 @@ import CitiesHub from './pages/CitiesHub';
 import CityStations from './pages/CityStations';
 import Calculator from './pages/Calculator';
 import { InstallPWA } from './components/InstallPWA';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import StationForm from './pages/admin/StationForm';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -29,6 +33,12 @@ function App() {
             <Route path="cities" element={<CitiesHub />} />
             <Route path="city/:cityName" element={<CityStations />} />
             <Route path="calculator" element={<Calculator />} />
+            
+            <Route path="admin/login" element={<AdminLogin />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="admin" element={<AdminDashboard />} />
+              <Route path="admin/station/:id" element={<StationForm />} />
+            </Route>
           </Route>
         </Routes>
       </Router>
