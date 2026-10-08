@@ -19,6 +19,18 @@ class FuelStationViewSet(viewsets.ModelViewSet):
     serializer_class = FuelStationSerializer
     permission_classes = [IsAdminOrReadOnly]
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = self.request.query_params.get('q', None)
+        if q:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__icontains=q) | 
+                Q(city__icontains=q) | 
+                Q(address__icontains=q)
+            )
+        return queryset
+    
     # We will implement geospatial queries here later (e.g., nearby, along-route)
     
     @action(detail=False, methods=['get'], url_path='nearby')

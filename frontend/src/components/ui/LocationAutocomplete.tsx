@@ -8,12 +8,14 @@ import { Loader2, MapPin } from 'lucide-react';
 interface LocationAutocompleteProps extends Omit<InputProps, 'value' | 'onChange'> {
   value: string;
   onChange: (value: string) => void;
+  onLocationSelect?: (result: GeocodeResult) => void;
   debounceMs?: number;
 }
 
 export const LocationAutocomplete = ({ 
   value, 
   onChange, 
+  onLocationSelect, 
   debounceMs = 400,
   ...props 
 }: LocationAutocompleteProps) => {
@@ -60,9 +62,10 @@ export const LocationAutocomplete = ({
   }, [value, debounceMs, isOpen]);
 
   const handleSelect = (result: GeocodeResult) => {
-    // Ideally we would want to store the lat/lon as well, but 
-    // for this UI flow, passing the display_name or coordinates works.
     onChange(result.display_name);
+    if (onLocationSelect) {
+      onLocationSelect(result);
+    }
     setSuggestions([]);
     setIsOpen(false);
   };

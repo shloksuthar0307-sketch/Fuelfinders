@@ -132,22 +132,42 @@ export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => 
       return [];
     }
 
-    const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query)}&filter=countrycode:in&limit=5&apiKey=${GEOAPIFY_API_KEY}`;
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&filter=countrycode:in&limit=5&apiKey=${GEOAPIFY_API_KEY}`;
     
-    // Using global axios (or fetch) to call external API directly
-    const response = await axios.get(url);
-    
-    if (!response.data || !response.data.features) {
-      console.error("Geocoding Error: Invalid API response");
-      return [];
+    // Concurrently fetch from Geoapify and our Local DB
+    const [geoapifyRes, localRes] = await Promise.allSettled([
+      axios.get(geoapifyUrl),
+      apiClient.get(`/stations/?q=${encodeURIComponent(query)}`)
+    ]);
+
+    const results: GeocodeResult[] = [];
+
+    // 1. Process local DB stations
+    if (localRes.status === 'fulfilled' && localRes.value.data) {
+      const stations = localRes.value.data;
+      stations.slice(0, 3).forEach((station: any) => {
+        results.push({
+          place_id: `db_${station.id}`,
+          lat: String(station.latitude),
+          lon: String(station.longitude),
+          display_name: `🏪 ${station.name}, ${station.city}`
+        });
+      });
     }
 
-    return response.data.features.map((feature: any) => ({
-      place_id: feature.properties.place_id,
-      lat: String(feature.properties.lat),
-      lon: String(feature.properties.lon),
-      display_name: feature.properties.formatted
-    }));
+    // 2. Process Geoapify locations
+    if (geoapifyRes.status === 'fulfilled' && geoapifyRes.value.data?.features) {
+      geoapifyRes.value.data.features.forEach((feature: any) => {
+        results.push({
+          place_id: feature.properties.place_id || Math.random().toString(),
+          lat: String(feature.properties.lat),
+          lon: String(feature.properties.lon),
+          display_name: feature.properties.formatted || feature.properties.name
+        });
+      });
+    }
+
+    return results;
   } catch (error: any) {
     console.error("Geocoding Error: Network or API error", error.message || error);
     return [];
