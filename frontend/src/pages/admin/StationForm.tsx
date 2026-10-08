@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchStation, createStation, updateStation, geocodeSearch, createPrice, deletePrice } from '../../lib/api';
+import { fetchStation, createStation, updateStation, geocodeSearchV3, createPrice, deletePrice } from '../../lib/api';
 import type { FuelStation } from '../../lib/api';
 // Card import removed
 import { Button } from '../../components/ui/Button';
@@ -66,7 +66,7 @@ export default function StationForm() {
     setPlusCode(code);
     if (code.length > 5) {
       try {
-        const results = await geocodeSearch(code);
+        const results = await geocodeSearchV3(code);
         if (results && results.length > 0) {
           const res = results[0];
           setFormData(prev => ({
@@ -156,7 +156,7 @@ export default function StationForm() {
 
   const handleSearchSelect = async (query: string) => {
     setSearchQuery(query);
-    const results = await geocodeSearch(query);
+    const results = await geocodeSearchV3(query);
     if (results && results.length > 0) {
       const res = results[0];
       setFormData(prev => ({
@@ -316,3 +316,4 @@ export default function StationForm() {
     </div>
   );
 }
+

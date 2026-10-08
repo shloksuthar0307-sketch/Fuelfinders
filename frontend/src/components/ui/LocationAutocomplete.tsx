@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { geocodeSearch } from '../../lib/api';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { geocodeSearchV3 } from '../../lib/api';
 import type { GeocodeResult } from '../../lib/api';
 import { Input } from './Input';
 import type { InputProps } from './Input';
@@ -21,6 +21,7 @@ export const LocationAutocomplete = ({
 }: LocationAutocompleteProps) => {
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -48,10 +49,10 @@ export const LocationAutocomplete = ({
 
       setIsLoading(true);
       try {
-        const results = await geocodeSearch(value);
-        setSuggestions(results);
+        const results = await geocodeSearchV3(value);
+        setSuggestions(results); 
       } catch (error) {
-        console.error("Failed to fetch suggestions", error);
+        console.error('Failed', error); 
         setSuggestions([]);
       } finally {
         setIsLoading(false);
@@ -83,6 +84,7 @@ export const LocationAutocomplete = ({
         onFocus={() => setIsOpen(true)}
         {...props}
       />
+      
       {isLoading && (
         <div className="absolute right-3 top-3.5 z-10">
           <Loader2 className="h-4 w-4 animate-spin text-brand-blue" />
@@ -109,3 +111,9 @@ export const LocationAutocomplete = ({
     </div>
   );
 };
+
+
+
+
+
+

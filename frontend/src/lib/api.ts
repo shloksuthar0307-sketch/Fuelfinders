@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -120,27 +120,32 @@ export interface GeocodeResult {
   display_name: string;
 }
 
-export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => {
+export const geocodeSearchV3 = async (query: string): Promise<GeocodeResult[]> => {
   if (!query || query.trim() === '') {
     return [];
   }
 
-  try {
-    const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
-    if (!GEOAPIFY_API_KEY) {
-      console.error("Geocoding Error: Missing Geoapify API key");
-      return [];
-    }
+  // Strip the convenience store emoji if it was passed back into the search
+  let cleanQuery = query.replace('\u{1F3EA} ', '').trim();
+  if (query.includes('\u{1F3EA} ') && cleanQuery.includes(',')) {
+    // If it's a DB station we formatted as "Name, City", extract just the Name
+    // to ensure our backend icontains filter matches it correctly.
+    cleanQuery = cleanQuery.split(',')[0].trim();
+  }
 
-    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&filter=countrycode:in&limit=5&apiKey=${GEOAPIFY_API_KEY}`;
+  try {
+    const GEOAPIFY_API_KEY = '88746cf83b5445c19d3035dd394383c7';
+    
+
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(cleanQuery)}&filter=countrycode:in&limit=5&apiKey=${GEOAPIFY_API_KEY}`;
     
     // Concurrently fetch from Geoapify and our Local DB
     const [geoapifyRes, localRes] = await Promise.allSettled([
       axios.get(geoapifyUrl),
-      apiClient.get(`/stations/?q=${encodeURIComponent(query)}`)
+      apiClient.get(`/stations/?q=${encodeURIComponent(cleanQuery)}`)
     ]);
 
-    const results: GeocodeResult[] = [];
+    const results: GeocodeResult[] = []; console.log('GEOAPIFY RES:', geoapifyRes); console.log('LOCAL RES:', localRes);
 
     // 1. Process local DB stations
     if (localRes.status === 'fulfilled' && localRes.value.data) {
@@ -150,7 +155,8 @@ export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => 
           place_id: `db_${station.id}`,
           lat: String(station.latitude),
           lon: String(station.longitude),
-          display_name: `🏪 ${station.name}, ${station.city}`
+          display_name: `\u{1F3EA} ${station.name}, ${station.city}`
+
         });
       });
     }
@@ -167,9 +173,25 @@ export const geocodeSearch = async (query: string): Promise<GeocodeResult[]> => 
       });
     }
 
+    if (results.length === 0) {
+      results.push({
+        place_id: 'debug_0',
+        lat: '0',
+        lon: '0',
+        display_name: `Debug: localRes=${localRes.status}, geoRes=${geoapifyRes.status}`
+      });
+      if (localRes.status === 'rejected') {
+         results.push({
+           place_id: 'debug_1',
+           lat: '0',
+           lon: '0',
+           display_name: `Debug error: ${String(localRes.reason)}`
+         });
+      }
+    }
     return results;
   } catch (error: any) {
-    console.error("Geocoding Error: Network or API error", error.message || error);
+    return [{ place_id: 'err2', lat: '0', lon: '0', display_name: 'CRASH: ' + String(error.message || error) }];//
     return [];
   }
 };
@@ -261,3 +283,9 @@ export const fetchCityStations = async (city: string): Promise<CityStationsRespo
   const response = await apiClient.get<CityStationsResponse>(`/routing/city-stations/`, { params: { city } });
   return response.data;
 };
+
+
+
+
+
+

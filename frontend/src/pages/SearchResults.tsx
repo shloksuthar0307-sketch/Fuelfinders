@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { geocodeSearch, fetchStationsAlongRoute } from '../lib/api';
+import { geocodeSearchV3, fetchStationsAlongRoute } from '../lib/api';
 import { addRouteToHistory } from '../lib/history';
 import MapComponent from '../components/MapComponent';
 import { Loader2, ArrowLeft, Fuel, Navigation, Clock, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
@@ -57,7 +57,7 @@ const SearchResults = () => {
           originLat = parseFloat(parts[0]);
           originLng = parseFloat(parts[1]);
         } else {
-          const originRes = await geocodeSearch(originQuery);
+          const originRes = await geocodeSearchV3(originQuery);
           if (!originRes.length) throw new Error("Origin location not found");
           originLat = parseFloat(originRes[0].lat);
           originLng = parseFloat(originRes[0].lon);
@@ -69,7 +69,7 @@ const SearchResults = () => {
           destLat = parseFloat(parts[0]);
           destLng = parseFloat(parts[1]);
         } else {
-          const destRes = await geocodeSearch(destQuery);
+          const destRes = await geocodeSearchV3(destQuery);
           if (!destRes.length) throw new Error("Destination not found");
           destLat = parseFloat(destRes[0].lat);
           destLng = parseFloat(destRes[0].lon);
@@ -336,3 +336,5 @@ const SearchResults = () => {
 };
 
 export default SearchResults;
+
+

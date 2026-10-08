@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import React from 'react';
+
 import { Search, MapPin, Navigation2, Loader2, ArrowUpDown } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/Card';
 import { LocationAutocomplete } from './ui/LocationAutocomplete';
@@ -35,15 +35,6 @@ export const SearchSidebar = ({
   className,
   cardClassName
 }: SearchSidebarProps) => {
-  const navigate = useNavigate();
-
-  const handleLocationSelect = (result: any) => {
-    if (result.place_id && result.place_id.startsWith('db_')) {
-      const stationId = result.place_id.replace('db_', '');
-      navigate(`/station/${stationId}`);
-    }
-  };
-
   return (
     <div className={className || "relative z-10 w-full md:w-[400px] md:h-full pointer-events-none p-3 sm:p-6 flex flex-col justify-end md:justify-start"}>
       <Card className={cardClassName || "flex flex-col pointer-events-auto max-h-[60vh] md:max-h-full overflow-y-auto shadow-2xl"}>
@@ -75,7 +66,7 @@ export const SearchSidebar = ({
                   placeholder="Current location or address"
                   value={origin}
                   onChange={setOrigin}
-                  onLocationSelect={handleLocationSelect}
+
                   icon={<Navigation2 className="h-5 w-5 text-brand-blue" />}
                 />
               </div>
@@ -83,10 +74,10 @@ export const SearchSidebar = ({
               <div className="space-y-2 mt-5">
                 <label className="text-xs font-semibold text-brand-secondary uppercase tracking-wider">Destination</label>
                 <LocationAutocomplete
-                  placeholder="Where are you going?"
+                  placeholder="Where are you going? [V2]"
                   value={destination}
                   onChange={setDestination}
-                  onLocationSelect={handleLocationSelect}
+
                   icon={<MapPin className="h-5 w-5 text-brand-danger" />}
                 />
               </div>
@@ -121,3 +112,4 @@ export const SearchSidebar = ({
     </div>
   );
 };
+

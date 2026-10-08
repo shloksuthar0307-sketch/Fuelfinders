@@ -30,6 +30,38 @@ class FuelStationViewSet(viewsets.ModelViewSet):
                 Q(address__icontains=q)
             )
         return queryset
+
+    def perform_create(self, serializer):
+        station = serializer.save(is_manually_edited=True)
+        # Auto save to seed.py
+        import os
+        import json
+        seed_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'seed.py')
+        try:
+            with open(seed_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            target_str = "    ]\n\n    for data in stations_data:"
+            if target_str in content:
+                new_entry = f'''        {{
+            "name": {json.dumps(station.name)},
+            "latitude": {station.latitude},
+            "longitude": {station.longitude},
+            "address": {json.dumps(station.address or "")},
+            "city": {json.dumps(station.city or "")},
+            "state": {json.dumps(station.state or "")},
+            "supported_fuels": {json.dumps(station.supported_fuels)},
+            "phone": {json.dumps(station.phone or "")},
+            "is_verified": {json.dumps(station.is_verified)},
+            "is_manually_edited": True
+        }},
+'''
+                parts = content.split(target_str)
+                new_content = parts[0] + new_entry + target_str + parts[1]
+                with open(seed_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+        except Exception as e:
+            print("Failed to auto-save to seed.py:", e)
     
     # We will implement geospatial queries here later (e.g., nearby, along-route)
     

@@ -1,0 +1,18 @@
+﻿# Global Ignores
+.env
+.env.*
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+.DS_Store
+
+# Backend
+__pycache__/
+venv/
+env/
+*.sqlite3
+backend/seed.py
+backend/media/
+backend/static/
